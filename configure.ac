@@ -196,6 +196,15 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+  [nsw],
+  [AS_HELP_STRING(
+    [--enable-nsw],
+    [enable navigable small world support [default=yes]])],
+  [[ARG_ENABLE_NSW=$enableval]],
+  [[ARG_ENABLE_NSW=yes]]
+)
+
+AC_ARG_ENABLE(
   [encryption],
   [AS_HELP_STRING(
     [--enable-encryption],
@@ -392,6 +401,20 @@ AS_CASE(["$ARG_ENABLE_DHT"],
    AC_MSG_ERROR([Unknown option "$ARG_ENABLE_DHT". Use either "yes", "no" or "logging".])]
 )
 
+AC_MSG_CHECKING([whether nsw support should be enabled])
+AS_CASE(["$ARG_ENABLE_NSW"],
+  ["yes"|"on"], [
+      AC_MSG_RESULT([yes])
+    ],
+  ["no"|"off"], [
+      AC_MSG_RESULT([no])
+      AC_DEFINE([TORRENT_DISABLE_NSW],[1],[Define to disable the NSW support.])
+      COMPILETIME_OPTIONS="$COMPILETIME_OPTIONS -DTORRENT_DISABLE_NSW "
+    ],
+  [AC_MSG_RESULT([$ARG_ENABLE_NSW])
+   AC_MSG_ERROR([Unknown option "$ARG_ENABLE_NSW". Use either "yes", "no" or "logging".])]
+)
+
 AC_MSG_CHECKING([whether pool allocators should be enabled])
 AS_CASE(["$ARG_ENABLE_POOL_ALLOC"],
   ["yes"|"on"], [
@@ -491,6 +514,7 @@ AM_CONDITIONAL([ENABLE_PYTHON_BINDING], [test "x$ARG_ENABLE_PYTHON_BINDING" = "x
 
 AM_CONDITIONAL([WITH_OPENSSL], [test "x$ARG_ENABLE_ENCRYPTION" = "xyes" -o "x$ARG_ENABLE_ENCRYPTION" = "xon" ])
 
+AM_CONDITIONAL([ENABLE_NSW], [test "x$ARG_ENABLE_NSW" = "xyes" -o "x$ARG_ENABLE_NSW" = "xlogging" ])
 
 ###############################################################################
 # Other useful stuff
@@ -591,6 +615,7 @@ Features:
   encryption support:   ${ARG_ENABLE_ENCRYPTION:-yes}
   dht support:          ${ARG_ENABLE_DHT:-yes}
   pool allocators:      ${ARG_ENABLE_POOL_ALLOC:-yes}
+  nsw support:          ${ARG_ENABLE_NSW:-yes}
 
 Extra builds:
   examples:             ${ARG_ENABLE_EXAMPLES:-no}

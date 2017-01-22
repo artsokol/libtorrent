@@ -2506,6 +2506,14 @@ namespace libtorrent
 		aux::allocation_slot const m_msg_idx;
 	};
 
+	struct TORRENT_EXPORT nsw_lookup
+	{
+		// string literal indicating which kind of lookup this is
+		char const* type;
+		// the node-id or info-hash target for this lookup
+		sha1_hash target;
+	};
+
 #undef TORRENT_DEFINE_ALERT_IMPL
 #undef TORRENT_DEFINE_ALERT
 #undef TORRENT_DEFINE_ALERT_PRIO

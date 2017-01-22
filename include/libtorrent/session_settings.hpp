@@ -254,6 +254,24 @@ namespace libtorrent
 	};
 #endif // TORRENT_NO_DEPRECATE
 
+struct TORRENT_EXPORT nsw_settings
+	{
+		nsw_settings()
+			: 
+#ifndef TORRENT_NO_DEPRECATE
+			service_port(0)
+#endif
+			, max_fail_count(20)
+			, item_lifetime(0)
+		{}
+
+
+#ifndef TORRENT_NO_DEPRECATE
+		int service_port;
+#endif
+		int max_fail_count;
+		int item_lifetime;
+	};
 }
 
 #endif
