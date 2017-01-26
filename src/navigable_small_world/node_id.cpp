@@ -1,64 +1,91 @@
 #include <algorithm>
 
 #include "libtorrent/navigable_small_world/node_id.hpp"
-#include "libtorrent/navigable_small_world/node_entry.hpp"
-#include "libtorrent/hasher.hpp"
 #include "libtorrent/assert.hpp"
-#include "libtorrent/broadcast_socket.hpp"
-#include "libtorrent/socket_io.hpp"
-#include "libtorrent/random.hpp"
-#include "libtorrent/hasher.hpp"
-#include "libtorrent/crc32c.hpp"
+#include "libtorrent/broadcast_socket.hpp" // for is_local et.al
+#include "libtorrent/random.hpp" // for random
+#include "libtorrent/hasher.hpp" // for hasher
+#include "libtorrent/crc32c.hpp" // for crc32c
 
 namespace libtorrent {
 namespace nsw
 {
 
-node_id distance(node_id const& n1, node_id const& n2)
+node_id generate_id_impl(address const& ip_, std::uint32_t r)
 {
-	node_id ret;
-	(void)n1;
-	(void)n2;
-	return ret;
-}
+	std::uint8_t* ip = nullptr;
 
+	static const std::uint8_t v4mask[] = { 0x03, 0x0f, 0x3f, 0xff };
+#if TORRENT_USE_IPV6
+	static const std::uint8_t v6mask[] = { 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff };
+#endif
+	std::uint8_t const* mask = nullptr;
+	int num_octets = 0;
 
-bool compare_ref(node_id const& n1, node_id const& n2, node_id const& ref)
-{
-	(void)n1;
-	(void)n2;
-	(void)ref;
-	return false;
-}
+	address_v4::bytes_type b4;
+#if TORRENT_USE_IPV6
+	address_v6::bytes_type b6;
+	if (ip_.is_v6())
+	{
+		b6 = ip_.to_v6().to_bytes();
+		ip = b6.data();
+		num_octets = 8;
+		mask = v6mask;
+	}
+	else
+#endif
+	{
+		b4 = ip_.to_v4().to_bytes();
+		ip = b4.data();
+		num_octets = 4;
+		mask = v4mask;
+	}
 
+	for (int i = 0; i < num_octets; ++i)
+		ip[i] &= mask[i];
 
-int distance_exp(node_id const& n1, node_id const& n2)
-{
+	ip[0] |= (r & 0x7) << 5;
 
-	(void)n1;
-	(void)n2;
-
-	return 0;
-}
-
-node_id generate_id_impl(address const& ip_, boost::uint32_t r)
-{
+	// this is the crc32c (Castagnoli) polynomial
+	std::uint32_t c;
+	if (num_octets == 4)
+	{
+		c = crc32c_32(*reinterpret_cast<std::uint32_t*>(ip));
+	}
+	else
+	{
+		TORRENT_ASSERT(num_octets == 8);
+		c = crc32c(reinterpret_cast<std::uint64_t*>(ip), 1);
+	}
 	node_id id;
-	(void)ip_;
-	(void)r;
+
+	id[0] = (c >> 24) & 0xff;
+	id[1] = (c >> 16) & 0xff;
+	id[2] = (((c >> 8) & 0xf8) | random(0x7)) & 0xff;
+
+	for (std::size_t i = 3; i < 19; ++i) id[i] = random(0xff) & 0xff;
+	id[19] = r & 0xff;
 
 	return id;
 }
 
-void make_id_secret(node_id& in)
+inline node_id generate_id(address const& ip)
 {
-	(void)in;
+	return generate_id_impl(ip, random(0xffffffff));
 }
 
 node_id generate_random_id()
 {
-	node_id id;
-	return id;
+	char r[20];
+	aux::random_bytes(r);
+	return hasher(r, 20).final();
+}
+
+//See the header for commenting explanation
+/*
+void make_id_secret(node_id& in)
+{
+	(void)in;
 }
 
 node_id generate_secret_id()
@@ -72,35 +99,32 @@ bool verify_secret_id(node_id const& nid)
 	(void)nid;
 	return false;
 }
+*/
 
 bool verify_id(node_id const& nid, address const& source_ip)
 {
-	(void)nid;
-	(void)source_ip;
-	return false;
+	// no need to verify local IPs, they would be incorrect anyway
+	if (is_local(source_ip)) return true;
+
+	node_id h = generate_id_impl(source_ip, nid[19]);
+	return nid[0] == h[0] && nid[1] == h[1] && (nid[2] & 0xf8) == (h[2] & 0xf8);
 }
 
-node_id generate_id(address const& ip)
+bool matching_prefix(node_id const& nid, int mask, int prefix, int offset)
 {
-	node_id id;
-	(void)ip;
-	return id;
-}
-
-bool matching_prefix(node_entry const& n, int mask, int prefix, int bucket_index)
-{
-	(void)n;
-	(void)mask;
-	(void)prefix;
-	(void)bucket_index;
-	return false;
+	node_id id = nid;
+	id <<= offset;
+	return (id[0] & mask) == prefix;
 }
 
 node_id generate_prefix_mask(int bits)
 {
-
-	node_id mask(0);
-	(void)bits;
+	TORRENT_ASSERT(bits >= 0);
+	TORRENT_ASSERT(bits <= 160);
+	node_id mask;
+	std::size_t b = 0;
+	for (; int(b) < bits - 7; b += 8) mask[b / 8] |= 0xff;
+	if (bits < 160) mask[b / 8] |= (0xff << (8 - (bits & 7))) & 0xff;
 	return mask;
 }
 
