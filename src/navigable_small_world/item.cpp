@@ -12,9 +12,11 @@ namespace libtorrent { namespace nsw
 
 namespace
 {
-	enum { canonical_length = 1200 };
-	int canonical_string(std::pair<char const*, int> v, boost::uint64_t seq
-		, std::pair<char const*, int> salt, char out[canonical_length])
+
+	int canonical_string(span<char const> v
+		, sequence_number const seq
+		, span<char const> salt
+		, span<char> out)
 	{
 		(void)v;
 		(void)seq;
@@ -23,16 +25,15 @@ namespace
 		return 0;
 	}
 }
-
-sha1_hash item_target_id(std::pair<char const*, int> v)
+sha1_hash item_target_id(span<char const> v)
 {
 	(void)v;
 	sha1_hash  tmp;
 	return tmp;
 }
 
-sha1_hash item_target_id(std::pair<char const*, int> salt
-	, char const* pk)
+sha1_hash item_target_id(span<char const> salt
+	, public_key const& pk)
 {
 	(void)salt;
 	(void)pk;
@@ -41,11 +42,11 @@ sha1_hash item_target_id(std::pair<char const*, int> salt
 }
 
 bool verify_mutable_item(
-	std::pair<char const*, int> v
-	, std::pair<char const*, int> salt
-	, boost::uint64_t seq
-	, char const* pk
-	, char const* sig)
+	span<char const> v
+	, span<char const> salt
+	, sequence_number const seq
+	, public_key const& pk
+	, signature const& sig)
 {
 	(void)v;
 	(void)salt;
@@ -55,13 +56,12 @@ bool verify_mutable_item(
 	return false;
 }
 
-void sign_mutable_item(
-	std::pair<char const*, int> v
-	, std::pair<char const*, int> salt
-	, boost::uint64_t seq
-	, char const* pk
-	, char const* sk
-	, char* sig)
+signature sign_mutable_item(
+	span<char const> v
+	, span<char const> salt
+	, sequence_number const seq
+	, public_key const& pk
+	, secret_key const& sk)
 {
 
 	(void)v;
@@ -69,48 +69,59 @@ void sign_mutable_item(
 	(void)seq;
 	(void)pk;
 	(void)sk;
-	(void)sig;
 }
 
-item::item(char const* pk, std::string const& salt)
-	: m_salt(salt)
+item::item(public_key const& pk, span<char const> salt)
+	: m_salt(salt.data(), salt.size())
+	, m_pk(pk)
 	, m_seq(0)
 	, m_mutable(true)
+{}
+
+
+item::item(entry v)
+	: m_value(std::move(v))
+	, m_seq(0)
+	, m_mutable(false)
+{}
+
+item::item(bdecode_node const& v)
+	: m_seq(0)
+	, m_mutable(false)
 {
-	memcpy(m_pk.data(), pk, item_pk_len);
+	// TODO: implement ctor for entry from bdecode_node?
+	m_value = v;
 }
 
-item::item(entry const& v
-	, std::pair<char const*, int> salt
-	, boost::uint64_t seq, char const* pk, char const* sk)
-{
-	assign(v, salt, seq, pk, sk);
-}
+item::item(entry v, span<char const> salt
+	, sequence_number const seq, public_key const& pk, secret_key const& sk)
+{}
 
-void item::assign(entry const& v, std::pair<char const*, int> salt
-	, boost::uint64_t seq, char const* pk, char const* sk)
+
+void item::assign(entry v)
 {
 	(void)v;
-	(void)salt;
-	(void)seq;
-	(void)pk;
-	(void)sk;
 }
 
-bool item::assign(bdecode_node const& v
-	, std::pair<char const*, int> salt
-	, boost::uint64_t seq, char const* pk, char const* sig)
+void item::assign(bdecode_node const& v)
+{
+	(void)v;
+}
+
+bool item::assign(bdecode_node const& v, span<char const> salt
+	, sequence_number const seq, public_key const& pk, signature const& sig)
 {
 	(void)v;
 	(void)salt;
 	(void)seq;
 	(void)pk;
 	(void)sig;
-	return true;
+	return false;
 }
 
-void item::assign(entry const& v, std::string salt, boost::uint64_t seq
-	, char const* pk, char const* sig)
+void item::assign(entry v, span<char const> salt
+	, sequence_number const seq
+	, public_key const& pk, signature const& sig)
 {
 	(void)v;
 	(void)salt;

@@ -16,7 +16,7 @@ namespace libtorrent { namespace nsw
 		std::array<char, len> bytes;
 	};
 
-	/*struct secret_key
+	struct secret_key
 	{
 		secret_key() = default;
 		explicit secret_key(char const* b)
@@ -26,7 +26,7 @@ namespace libtorrent { namespace nsw
 		constexpr static int len = 64;
 		std::array<char, len> bytes;
 	};
-*/
+
 	struct signature
 	{
 		signature() = default;
