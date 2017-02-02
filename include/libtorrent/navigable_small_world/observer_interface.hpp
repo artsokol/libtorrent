@@ -1,24 +1,51 @@
-#ifndef MAIN_OBSERVER_HPP
-#define MAIN_OBSERVER_HPP
+#ifndef MAIN_OBSERVER_INTERFACE_HPP
+#define MAIN_OBSERVER_INTERFACE_HPP
 
 #include <cstdint>
 #include <memory>
 
+#include <libtorrent/navigable_small_world/node_id.hpp>
+#include <libtorrent/navigable_small_world/msg.hpp>
+#include <libtorrent/navigable_small_world/nsw_observer.hpp>
 #include <libtorrent/time.hpp>
 #include <libtorrent/address.hpp>
 
-namespace libtorrent {
-namespace nsw {
+namespace libtorrent { namespace nsw {
 
-struct nsw_observer;
-struct observer;
-struct msg;
+//struct nsw_observer;
+//struct msg;
 struct traversal_algorithm;
+//class observer_interface;
 
-struct TORRENT_EXTRA_EXPORT observer : boost::noncopyable
-	, std::enable_shared_from_this<observer>
+//definition of observer interface (pattern)
+class TORRENT_EXTRA_EXPORT observer_interface : boost::noncopyable
+	, std::enable_shared_from_this<observer_interface>
 {
-	observer(std::shared_ptr<traversal_algorithm> const& a
+	std::shared_ptr<observer_interface> self() { return shared_from_this(); }
+
+	time_point m_sent;
+
+	const std::shared_ptr<traversal_algorithm> m_algorithm;
+
+	node_id m_id;
+
+	union addr_t
+	{
+#if TORRENT_USE_IPV6
+		address_v6::bytes_type v6;
+#endif
+		address_v4::bytes_type v4;
+	} m_addr;
+
+	std::uint16_t m_port;
+
+	std::uint16_t m_transaction_id;
+
+protected:
+	void done();
+
+public:
+	observer_interface(std::shared_ptr<traversal_algorithm> const& a
 		, udp::endpoint const& ep, node_id const& id)
 		: m_sent()
 		, m_algorithm(a)
@@ -37,14 +64,19 @@ struct TORRENT_EXTRA_EXPORT observer : boost::noncopyable
 		set_target(ep);
 	}
 
-	virtual ~observer();
+	virtual ~observer_interface();
 
+	// this is called when a reply is received
 	virtual void reply(msg const& m) = 0;
 
+	// this is called if no response has been received after
+	// a few seconds, before the request has timed out
 	void short_timeout();
 
 	bool has_short_timeout() const { return (flags & flag_short_timeout) != 0; }
 
+	// this is called when no reply has been received within
+	// some timeout, or a reply with incorrect format.
 	virtual void timeout();
 
 	void abort();
@@ -79,33 +111,7 @@ struct TORRENT_EXTRA_EXPORT observer : boost::noncopyable
 		flag_done = 128
 	};
 
-protected:
 
-	void done();
-
-private:
-
-	std::shared_ptr<observer> self()
-	{ return shared_from_this(); }
-
-	time_point m_sent;
-
-	const std::shared_ptr<traversal_algorithm> m_algorithm;
-
-	node_id m_id;
-
-	union addr_t
-	{
-#if TORRENT_USE_IPV6
-		address_v6::bytes_type v6;
-#endif
-		address_v4::bytes_type v4;
-	} m_addr;
-
-	std::uint16_t m_port;
-
-	std::uint16_t m_transaction_id;
-public:
 	std::uint8_t flags;
 
 #if TORRENT_USE_ASSERTS
@@ -116,8 +122,8 @@ public:
 #endif
 };
 
-typedef std::shared_ptr<observer> observer_ptr;
+typedef std::shared_ptr<observer_interface> observer_ptr;
 
 } }
 
-#endif // MAIN_OBSERVER_HPP
+#endif // MAIN_OBSERVER_INTERFACE_HPP

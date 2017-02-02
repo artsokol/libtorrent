@@ -34,12 +34,12 @@ struct msg;
 
 TORRENT_EXTRA_EXPORT entry write_nodes_entry(std::vector<node_entry> const& nodes);
 
-class announce_observer : public observer
+class announce_observer : public observer_interface
 {
 public:
 	announce_observer(std::shared_ptr<traversal_algorithm> const& algo
 		, udp::endpoint const& ep, node_id const& id)
-		: observer(algo, ep, id)
+		: observer_interface(algo, ep, id)
 	{}
 
 	void reply(msg const&) { flags |= flag_done; }

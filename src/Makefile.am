@@ -43,6 +43,7 @@ NSW_SOURCES = \
   navigable_small_world/node_entry.cpp       \
   navigable_small_world/node_id.cpp          \
   navigable_small_world/nsw_routing_table.cpp    \
+  navigable_small_world/observer_interface.cpp \
   navigable_small_world/rpc_manager.cpp      \
   navigable_small_world/traversal_algorithm.cpp \
   navigable_small_world/item.cpp             \

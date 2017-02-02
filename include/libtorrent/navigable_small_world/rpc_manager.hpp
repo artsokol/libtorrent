@@ -11,19 +11,27 @@
 #include <libtorrent/socket.hpp>
 #include <libtorrent/time.hpp>
 #include <libtorrent/navigable_small_world/node_id.hpp>
-#include <libtorrent/navigable_small_world/observer.hpp>
+#include <libtorrent/navigable_small_world/observer_interface.hpp>
 
-namespace libtorrent { struct nsw_settings; class entry; }
+
+namespace libtorrent
+{
+	struct nsw_settings;
+	class entry;
+
+}
+
 namespace libtorrent { namespace nsw
 {
 
 struct nsw_logger;
 struct udp_socket_interface;
+struct traversal_algorithm;
 
-struct TORRENT_EXTRA_EXPORT null_observer : public observer
+struct TORRENT_EXTRA_EXPORT null_observer : public observer_interface
 {
 	null_observer(std::shared_ptr<traversal_algorithm> const& a
-		, udp::endpoint const& ep, node_id const& id): observer(a, ep, id) {}
+		, udp::endpoint const& ep, node_id const& id): observer_interface(a, ep, id) {}
 	virtual void reply(msg const&) { flags |= flag_done; }
 };
 
@@ -56,9 +64,9 @@ public:
 		void* ptr = allocate_observer();
 		if (ptr == nullptr) return std::shared_ptr<T>();
 
-		auto deleter = [this](observer* o)
+		auto deleter = [this](observer_interface* o)
 		{
-			o->~observer();
+			o->~observer_interface();
 			free_observer(o);
 		};
 		return std::shared_ptr<T>(new (ptr) T(std::forward<Args>(args)...), deleter);

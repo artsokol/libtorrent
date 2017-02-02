@@ -1,16 +1,15 @@
 #include <libtorrent/navigable_small_world/traversal_algorithm.hpp>
-#include <libtorrent/navigable_small_world/nsw_routing_table.hpp>
 #include <libtorrent/navigable_small_world/rpc_manager.hpp>
 #include <libtorrent/navigable_small_world/node.hpp>
 #include <libtorrent/navigable_small_world/nsw_observer.hpp>
-#include <libtorrent/socket_io.hpp>
-#include <libtorrent/alert_types.hpp>
+#include <libtorrent/session_status.hpp>
+#include <libtorrent/socket_io.hpp> // for read_*_endpoint
+#include <libtorrent/alert_types.hpp> // for dht_lookup
 #include <libtorrent/aux_/time.hpp>
 
 #ifndef TORRENT_DISABLE_LOGGING
 #include <libtorrent/hex.hpp>
 #endif
-
 using namespace std::placeholders;
 
 namespace libtorrent { namespace nsw

@@ -2,13 +2,10 @@
 #include <libtorrent/io.hpp>
 #include <libtorrent/random.hpp>
 #include <libtorrent/invariant_check.hpp>
+
 #include <libtorrent/navigable_small_world/rpc_manager.hpp>
 #include <libtorrent/navigable_small_world/nsw_routing_table.hpp>
-
 #include <libtorrent/navigable_small_world/node.hpp>
-#include <libtorrent/navigable_small_world/nsw_observer.hpp>
-
-
 #include <libtorrent/socket_io.hpp>
 #include <libtorrent/hasher.hpp>
 #include <libtorrent/session_settings.hpp>
@@ -23,51 +20,7 @@
 
 using namespace std::placeholders;
 
-namespace libtorrent { namespace nsw
-{
-
-nsw_observer* observer::get_observer() const
-{
-	nsw_observer* tmp = NULL;
-	return tmp;
-}
-
-void observer::set_target(udp::endpoint const& ep)
-{
-	(void)ep;
-}
-
-address observer::target_addr() const
-{
-	return address_v4(0);
-}
-
-udp::endpoint observer::target_ep() const
-{
-	return udp::endpoint(target_addr(), m_port);
-}
-
-void observer::abort()
-{
-}
-
-void observer::done()
-{
-
-}
-
-void observer::short_timeout()
-{
-}
-
-void observer::timeout()
-{
-}
-
-void observer::set_id(node_id const& id)
-{
-}
-
+namespace libtorrent { namespace nsw {
 
 rpc_manager::rpc_manager(node_id const& our_id
 	, nsw_settings const& settings
@@ -131,10 +84,6 @@ bool rpc_manager::invoke(entry& e, udp::endpoint target_addr
 	(void)target_addr;
 	(void)o;
 	return false;
-}
-
-observer::~observer()
-{
 }
 
 } }

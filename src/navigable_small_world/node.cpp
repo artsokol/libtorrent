@@ -202,12 +202,12 @@ void put_item(public_key const& pk, std::string const& salt
 
 }
 
-struct ping_observer : observer
+struct ping_observer : observer_interface
 {
 	ping_observer(
 		std::shared_ptr<traversal_algorithm> const& algorithm
 		, udp::endpoint const& ep, node_id const& id)
-		: observer(algorithm, ep, id)
+		: observer_interface(algorithm, ep, id)
 	{}
 
 	virtual void reply(msg const& m)

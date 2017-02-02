@@ -7,7 +7,7 @@
 
 #include <libtorrent/navigable_small_world/node_id.hpp>
 #include <libtorrent/navigable_small_world/nsw_routing_table.hpp>
-#include <libtorrent/navigable_small_world/observer.hpp>
+#include <libtorrent/navigable_small_world/observer_interface.hpp>
 #include <libtorrent/address.hpp>
 
 #include "libtorrent/aux_/disable_warnings_push.hpp"
@@ -93,12 +93,12 @@ private:
 #endif
 };
 
-struct traversal_observer : observer
+struct traversal_observer : observer_interface
 {
 	traversal_observer(
 		std::shared_ptr<traversal_algorithm> const& algorithm
 		, udp::endpoint const& ep, node_id const& id)
-		: observer(algorithm, ep, id)
+		: observer_interface(algorithm, ep, id)
 	{}
 
 	virtual void reply(msg const&);
