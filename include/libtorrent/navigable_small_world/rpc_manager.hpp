@@ -24,7 +24,7 @@ namespace libtorrent
 namespace libtorrent { namespace nsw
 {
 
-struct nsw_logger;
+struct nsw_logger_interface;
 struct udp_socket_interface;
 struct traversal_algorithm;
 
@@ -45,7 +45,7 @@ public:
 		, nsw_settings const& settings
 		, routing_table& table
 		, udp_socket_interface* sock
-		, nsw_logger* log);
+		, nsw_logger_interface* log);
 	~rpc_manager();
 
 	void unreachable(udp::endpoint const& ep);
@@ -83,7 +83,7 @@ private:
 
 	udp_socket_interface* m_sock;
 #ifndef TORRENT_DISABLE_LOGGING
-	nsw_logger* m_log;
+	nsw_logger_interface* m_log;
 #endif
 	nsw_settings const& m_settings;
 	routing_table& m_table;

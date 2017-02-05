@@ -25,7 +25,7 @@ namespace libtorrent { namespace nsw {
 rpc_manager::rpc_manager(node_id const& our_id
 	, nsw_settings const& settings
 	, routing_table& table, udp_socket_interface* sock
-	, nsw_logger* log)
+	, nsw_logger_interface* log)
 	: m_sock(sock)
 #ifndef TORRENT_DISABLE_LOGGING
 	, m_log(log)

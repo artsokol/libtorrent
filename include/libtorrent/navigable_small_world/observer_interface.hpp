@@ -6,13 +6,13 @@
 
 #include <libtorrent/navigable_small_world/node_id.hpp>
 #include <libtorrent/navigable_small_world/msg.hpp>
-#include <libtorrent/navigable_small_world/nsw_observer.hpp>
+#include <libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp>
 #include <libtorrent/time.hpp>
 #include <libtorrent/address.hpp>
 
 namespace libtorrent { namespace nsw {
 
-//struct nsw_observer;
+//struct nsw_logger_observer_interface;
 //struct msg;
 struct traversal_algorithm;
 //class observer_interface;
@@ -81,7 +81,7 @@ public:
 
 	void abort();
 
-	nsw_observer* get_observer() const;
+	nsw_logger_observer_interface* get_observer() const;
 
 	traversal_algorithm* algorithm() const { return m_algorithm.get(); }
 

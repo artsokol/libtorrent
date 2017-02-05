@@ -13,7 +13,7 @@
 #include "libtorrent/navigable_small_world/nsw_routing_table.hpp"
 #include "libtorrent/session_status.hpp"
 #include "libtorrent/navigable_small_world/node_id.hpp"
-#include "libtorrent/navigable_small_world/nsw_observer.hpp"
+#include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
 #include "libtorrent/aux_/time.hpp"
 #include "libtorrent/alert_types.hpp"
 #include "libtorrent/socket_io.hpp"
@@ -58,7 +58,7 @@ void ip_set::erase(address const& addr)
 
 routing_table::routing_table(node_id const& id, udp proto, int bucket_size
 	, nsw_settings const& settings
-	, nsw_logger* log)
+	, nsw_logger_interface* log)
 	:
 #ifndef TORRENT_DISABLE_LOGGING
 	m_log(log),

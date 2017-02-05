@@ -7,7 +7,7 @@
 
 #include <boost/unordered_map.hpp>
 
-#include <libtorrent/navigable_small_world/nsw_observer.hpp>
+#include <libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp>
 #include "libtorrent/sha1_hash.hpp"
 
 namespace libtorrent {
@@ -23,7 +23,7 @@ private:
     const double m_missedValueWeight; //using for filing frequency
     boost::unordered::unordered_map<std::wstring, double> m_tf;
     //double m_idf; //unnecceesary variable as we have just one document
-    nsw_observer* m_observer;
+    nsw_logger_observer_interface* m_observer;
 public:
 
     term_vector():
@@ -34,7 +34,7 @@ public:
     {}
 
     term_vector(const char* textFile
-                , nsw_observer* observer):
+                , nsw_logger_observer_interface* observer):
                         m_missedValueWeight(0.00000001),
                         m_tf(),
                         m_observer(observer)
@@ -47,7 +47,7 @@ public:
 #endif
     }
 
-    term_vector(nsw_observer* observer,
+    term_vector(nsw_logger_observer_interface* observer,
                 const std::string& string_to_parse):
                         m_missedValueWeight(0.00000001),
                         m_tf(),
@@ -101,7 +101,7 @@ public:
     //nuber of uniq words in our vector
     unsigned long cardinality() const;
 
-    nsw_observer* observer() const { return m_observer; }
+    nsw_logger_observer_interface* observer() const { return m_observer; }
 
 private:
     double cosineSimilarity(const boost::unordered::unordered_map<std::wstring, double>&,const boost::unordered::unordered_map<std::wstring, double>& );

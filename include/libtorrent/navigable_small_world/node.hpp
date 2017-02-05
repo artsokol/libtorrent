@@ -29,7 +29,7 @@ namespace libtorrent { namespace nsw
 {
 
 struct traversal_algorithm;
-struct nsw_observer;
+struct nsw_logger_observer_interface;
 struct msg;
 
 TORRENT_EXTRA_EXPORT entry write_nodes_entry(std::vector<node_entry> const& nodes);
@@ -59,7 +59,7 @@ public:
 	node(udp proto, udp_socket_interface* sock
 		, libtorrent::nsw_settings const& settings
 		, node_id const& nid
-		, nsw_observer* observer, counters& cnt
+		, nsw_logger_observer_interface* observer, counters& cnt
 		, std::map<std::string, node*> const& nodes
 		, nsw_storage_interface& storage);
 
@@ -154,7 +154,7 @@ public:
 	libtorrent::nsw_settings const& settings() const { return m_settings; }
 	counters& stats_counters() const { return m_counters; }
 
-	nsw_observer* observer() const { return m_observer; }
+	nsw_logger_observer_interface* observer() const { return m_observer; }
 
 	udp protocol() const { return m_protocol.protocol; }
 	char const* protocol_family_name() const { return m_protocol.family_name; }
@@ -207,7 +207,7 @@ private:
 
 	std::map<std::string, node*> const& m_nodes;
 
-	nsw_observer* m_observer;
+	nsw_logger_observer_interface* m_observer;
 
 	protocol_descriptor const& m_protocol;
 

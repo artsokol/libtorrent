@@ -25,7 +25,7 @@ namespace libtorrent
 
 namespace libtorrent { namespace nsw
 {
-struct nsw_logger;
+struct nsw_logger_interface;
 
 typedef std::vector<node_entry> bucket_t;
 
@@ -109,7 +109,7 @@ public:
 	routing_table(node_id const& id, udp proto
 		, int bucket_size
 		, nsw_settings const& settings
-		, nsw_logger* log);
+		, nsw_logger_interface* log);
 
 	routing_table(routing_table const&) = delete;
 	routing_table& operator=(routing_table const&) = delete;
@@ -213,7 +213,7 @@ public:
 private:
 
 #ifndef TORRENT_DISABLE_LOGGING
-	nsw_logger* m_log;
+	nsw_logger_interface* m_log;
 	void log_node_failed(node_id const& nid, node_entry const& ne) const;
 #endif
 

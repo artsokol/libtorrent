@@ -31,7 +31,7 @@ struct TORRENT_EXTRA_EXPORT nsw_tracker final
 		using send_fun_t = std::function<void(udp::endpoint const&
 			, span<char const>, error_code&, int)>;
 
-		nsw_tracker(nsw_observer* observer
+		nsw_tracker(nsw_logger_observer_interface* observer
 			, io_service& ios
 			, send_fun_t const& send_fun
 			, nsw_settings const& settings
@@ -107,7 +107,7 @@ struct TORRENT_EXTRA_EXPORT nsw_tracker final
 		node m_nsw6;
 #endif
 		send_fun_t m_send_fun;
-		nsw_logger* m_log;
+		nsw_logger_interface* m_log;
 
 		std::vector<char> m_send_buf;
 

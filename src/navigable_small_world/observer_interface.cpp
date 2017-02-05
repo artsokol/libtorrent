@@ -1,11 +1,11 @@
-#include <libtorrent/navigable_small_world/nsw_observer.hpp>
+#include <libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp>
 #include <libtorrent/navigable_small_world/observer_interface.hpp>
 #include <libtorrent/navigable_small_world/traversal_algorithm.hpp>
 #include <libtorrent/navigable_small_world/node.hpp>
 
 namespace libtorrent { namespace nsw {
 
-inline nsw_observer* observer_interface::get_observer() const
+inline nsw_logger_observer_interface* observer_interface::get_observer() const
 {
     return m_algorithm->get_node().observer();
 }

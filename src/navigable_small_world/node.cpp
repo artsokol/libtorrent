@@ -21,7 +21,7 @@
 #include "libtorrent/performance_counters.hpp"
 
 #include "libtorrent/navigable_small_world/node.hpp"
-#include "libtorrent/navigable_small_world/nsw_observer.hpp"
+#include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
 #include "libtorrent/navigable_small_world/term_vector.hpp"
 
 namespace libtorrent { namespace nsw {
@@ -30,7 +30,7 @@ namespace {
 
 void nop() {}
 
-node_id calculate_node_id(node_id const& nid, nsw_observer* observer, udp protocol)
+node_id calculate_node_id(node_id const& nid, nsw_logger_observer_interface* observer, udp protocol)
 {
 	(void)nid;
 	(void*)observer;
@@ -50,7 +50,7 @@ void incoming_error(entry& e, char const* msg, int error_code = 203)
 node::node(udp proto, udp_socket_interface* sock
 	, nsw_settings const& settings
 	, node_id const& nid
-	, nsw_observer* observer
+	, nsw_logger_observer_interface* observer
 	, counters& cnt
 	, std::map<std::string, node*> const& nodes
 	, nsw_storage_interface& storage)

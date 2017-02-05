@@ -1,5 +1,5 @@
-#ifndef NSW_OBSERVER_HPP
-#define NSW_OBSERVER_HPP
+#ifndef NSW_LOGGER_OBSERVER_INTERFACE_HPP
+#define NSW_LOGGER_OBSERVER_INTERFACE_HPP
 
 #include "libtorrent/string_view.hpp"
 #include "libtorrent/config.hpp"
@@ -10,7 +10,7 @@
 
 namespace libtorrent { namespace nsw
 {
-	struct TORRENT_EXTRA_EXPORT nsw_logger
+	struct TORRENT_EXTRA_EXPORT nsw_logger_interface
 	{
 #ifndef TORRENT_DISABLE_LOGGING
 		enum module_t
@@ -35,10 +35,10 @@ namespace libtorrent { namespace nsw
 #endif
 
 	protected:
-		~nsw_logger() {}
+		~nsw_logger_interface() {}
 	};
 
-	struct TORRENT_EXTRA_EXPORT nsw_observer : nsw_logger
+	struct TORRENT_EXTRA_EXPORT nsw_logger_observer_interface : nsw_logger_interface
 	{
 		virtual void set_external_address(address const& addr
 			, address const& source) = 0;
@@ -46,13 +46,13 @@ namespace libtorrent { namespace nsw
 		virtual void get_peers(sha1_hash const& ih) = 0;
 		virtual void outgoing_get_peers(sha1_hash const& target
 			, sha1_hash const& sent_target, udp::endpoint const& ep) = 0;
-		virtual void announce(sha1_hash const& ih, address const& addr, int port) = 0;
-		virtual bool on_nsw_request(string_view query
+		//virtual void announce(sha1_hash const& ih, address const& addr, int port) = 0;
+		virtual bool on_add_friend_request(string_view query
 			, nsw::msg const& request, entry& response) = 0;
 
 	protected:
-		~nsw_observer() {}
+		~nsw_logger_observer_interface() {}
 	};
 }}
 
-#endif // NSW_OBSERVER_HPP
+#endif // NSW_LOGGER_OBSERVER_INTERFACE_HPP

@@ -3,7 +3,7 @@
 #include <libtorrent/config.hpp>
 
 #include <libtorrent/navigable_small_world/msg.hpp>
-#include <libtorrent/navigable_small_world/nsw_observer.hpp>
+#include <libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp>
 
 #include <libtorrent/bencode.hpp>
 #include <libtorrent/version.hpp>
@@ -39,7 +39,7 @@ namespace {
 	} // anonymous namespace
 
 
-	nsw_tracker::nsw_tracker(nsw_observer* observer
+	nsw_tracker::nsw_tracker(nsw_logger_observer_interface* observer
 		, io_service& ios
 		, send_fun_t const& send_fun
 		, nsw_settings const& settings
