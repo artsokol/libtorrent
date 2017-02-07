@@ -19,7 +19,7 @@ namespace libtorrent { namespace nsw
 			node,
 			routing_table,
 			rpc_manager,
-			traversal
+//			traversal
 		};
 
 		enum message_direction_t

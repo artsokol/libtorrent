@@ -28,8 +28,9 @@ struct nsw_logger_interface;
 struct udp_socket_interface;
 struct traversal_algorithm;
 
-struct TORRENT_EXTRA_EXPORT null_observer : public observer_interface
+class TORRENT_EXTRA_EXPORT null_observer : public observer_interface
 {
+public:
 	null_observer(std::shared_ptr<traversal_algorithm> const& a
 		, udp::endpoint const& ep, node_id const& id): observer_interface(a, ep, id) {}
 	virtual void reply(msg const&) { flags |= flag_done; }
@@ -74,11 +75,16 @@ public:
 
 	int num_allocated_observers() const { return m_allocated_observers; }
 
+#if TORRENT_USE_ASSERTS
+	size_t allocation_size() const;
+#endif
+
 private:
 
 	void* allocate_observer();
 	void free_observer(void* ptr);
 
+	mutable boost::pool<> m_pool_allocator;
 	std::unordered_multimap<int, observer_ptr> m_transactions;
 
 	udp_socket_interface* m_sock;

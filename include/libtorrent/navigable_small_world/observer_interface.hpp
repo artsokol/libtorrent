@@ -12,12 +12,10 @@
 
 namespace libtorrent { namespace nsw {
 
-//struct nsw_logger_observer_interface;
-//struct msg;
 struct traversal_algorithm;
-//class observer_interface;
 
-//definition of observer interface (pattern)
+// definition of observer interface (pattern)
+// which is used for NSW protocol commands wrapping
 class TORRENT_EXTRA_EXPORT observer_interface : boost::noncopyable
 	, std::enable_shared_from_this<observer_interface>
 {
@@ -85,6 +83,7 @@ public:
 
 	traversal_algorithm* algorithm() const { return m_algorithm.get(); }
 
+    //time mark for packets when
 	time_point sent() const { return m_sent; }
 
 	void set_target(udp::endpoint const& ep);
