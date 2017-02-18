@@ -214,4 +214,18 @@ nobase_include_HEADERS = \
   kademlia/ed25519.hpp              \
   kademlia/item.hpp                 \
   kademlia/get_item.hpp             \
-  kademlia/get_peers.hpp
+  kademlia/get_peers.hpp            \
+  \
+  navigable_small_world/nsw_state.hpp                      \
+  navigable_small_world/nsw_tracker.hpp                    \
+  navigable_small_world/msg.hpp                            \
+  navigable_small_world/node.hpp                           \
+  navigable_small_world/node_entry.hpp                     \
+  navigable_small_world/node_id.hpp                        \
+  navigable_small_world/observer_interface.hpp             \
+  navigable_small_world/nsw_logger_observer_interface.hpp  \
+  navigable_small_world/nsw_routing_table.hpp              \
+  navigable_small_world/rpc_manager.hpp                    \
+  navigable_small_world/traversal_algorithm.hpp            \
+  navigable_small_world/types.hpp                          \
+  navigable_small_world/term_vector.hpp
