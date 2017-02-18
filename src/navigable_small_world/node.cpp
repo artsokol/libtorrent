@@ -52,8 +52,8 @@ node::node(udp proto, udp_socket_interface* sock
 	, node_id const& nid
 	, nsw_logger_observer_interface* observer
 	, counters& cnt
-	, std::map<std::string, node*> const& nodes
-	, nsw_storage_interface& storage)
+	, std::map<std::string, node*> const& nodes)
+//	, nsw_storage_interface& storage)
 	: m_settings(settings)
 	, m_id(calculate_node_id(nid, observer, proto))
 	, m_table(m_id, proto, 8, settings, observer)
@@ -65,7 +65,7 @@ node::node(udp proto, udp_socket_interface* sock
 	, m_last_self_refresh(min_time())
 	, m_sock(sock)
 	, m_counters(cnt)
-	, m_storage(storage)
+//	, m_storage(storage)
 {
 
 }
@@ -164,14 +164,14 @@ void direct_request(udp::endpoint const& ep, entry& e
 
 }
 
-void get_item(sha1_hash const& target, std::function<void(item const&)> f)
-{
+// void get_item(sha1_hash const& target, std::function<void(item const&)> f)
+// {
 
-}
+// }
 
-void get_item(public_key const& pk, std::string const& salt, std::function<void(item const&, bool)> f)
-{
-}
+// void get_item(public_key const& pk, std::string const& salt, std::function<void(item const&, bool)> f)
+// {
+// }
 
 namespace {
 
@@ -190,17 +190,17 @@ void put_data_cb(item i, bool auth
 } // namespace
 
 
-void put_item(sha1_hash const& target, entry const& data, std::function<void(int)> f)
-{
+// void put_item(sha1_hash const& target, entry const& data, std::function<void(int)> f)
+// {
 
-}
+// }
 
-void put_item(public_key const& pk, std::string const& salt
-		, std::function<void(item const&, int)> f
-		, std::function<void(item&)> data_cb)
-{
+// void put_item(public_key const& pk, std::string const& salt
+// 		, std::function<void(item const&, int)> f
+// 		, std::function<void(item&)> data_cb)
+// {
 
-}
+// }
 
 struct ping_observer : observer_interface
 {

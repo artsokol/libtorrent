@@ -44,31 +44,31 @@ namespace libtorrent { namespace nsw{
 			, bool noseed, bool scrape, address const& requester
 			, entry& peers) const = 0;
 
-		virtual void announce_peer(sha1_hash const& info_hash
-			, tcp::endpoint const& endp
-			, string_view name, bool seed) = 0;
+		// virtual void announce_peer(sha1_hash const& info_hash
+		// 	, tcp::endpoint const& endp
+		// 	, string_view name, bool seed) = 0;
 
-		virtual bool get_immutable_item(sha1_hash const& target
-			, entry& item) const = 0;
+		// virtual bool get_immutable_item(sha1_hash const& target
+		// 	, entry& item) const = 0;
 
-		virtual void put_immutable_item(sha1_hash const& target
-			, span<char const> buf
-			, address const& addr) = 0;
+		// virtual void put_immutable_item(sha1_hash const& target
+		// 	, span<char const> buf
+		// 	, address const& addr) = 0;
 
-		virtual bool get_mutable_item_seq(sha1_hash const& target
-			, sequence_number& seq) const = 0;
+		// virtual bool get_mutable_item_seq(sha1_hash const& target
+		// 	, sequence_number& seq) const = 0;
 
-		virtual bool get_mutable_item(sha1_hash const& target
-			, sequence_number seq, bool force_fill
-			, entry& item) const = 0;
+		// virtual bool get_mutable_item(sha1_hash const& target
+		// 	, sequence_number seq, bool force_fill
+		// 	, entry& item) const = 0;
 
-		virtual void put_mutable_item(sha1_hash const& target
-			, span<char const> buf
-			, signature const& sig
-			, sequence_number seq
-			, public_key const& pk
-			, span<char const> salt
-			, address const& addr) = 0;
+		// virtual void put_mutable_item(sha1_hash const& target
+		// 	, span<char const> buf
+		// 	, signature const& sig
+		// 	, sequence_number seq
+		// 	, public_key const& pk
+		// 	, span<char const> salt
+		// 	, address const& addr) = 0;
 
 		virtual void tick() = 0;
 
@@ -83,6 +83,6 @@ namespace libtorrent { namespace nsw{
 	TORRENT_EXPORT std::unique_ptr<nsw_storage_interface>
 		nsw_default_storage_constructor(nsw_settings const& settings);
 
-} } 
+} }
 
 #endif // NSW_STORAGE_HPP

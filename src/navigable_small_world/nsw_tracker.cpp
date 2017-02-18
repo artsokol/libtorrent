@@ -44,16 +44,16 @@ namespace {
 		, send_fun_t const& send_fun
 		, nsw_settings const& settings
 		, counters& cnt
-		, nsw_storage_interface& storage
+//		, nsw_storage_interface& storage
 		, nsw_state state)
 		: m_counters(cnt)
-		, m_storage(storage)
+//		, m_storage(storage)
 		, m_state(std::move(state))
 		, m_nsw(udp::v4(), this, settings, m_state.nid
-			, observer, cnt, m_nodes, storage)
+			, observer, cnt, m_nodes)
 #if TORRENT_USE_IPV6
 		, m_nsw6(udp::v6(), this, settings, m_state.nid6
-			, observer, cnt, m_nodes, storage)
+			, observer, cnt, m_nodes)
 #endif
 		, m_send_fun(send_fun)
 		, m_log(observer)
@@ -125,12 +125,12 @@ namespace {
 	{
 	}
 
-	void nsw_tracker::get_peers(sha1_hash const& ih
-		, std::function<void(std::vector<tcp::endpoint> const&)> f)
-	{
-		(void)ih;
-		(void)f;
-	}
+	// void nsw_tracker::get_peers(sha1_hash const& ih
+	// 	, std::function<void(std::vector<tcp::endpoint> const&)> f)
+	// {
+	// 	(void)ih;
+	// 	(void)f;
+	// }
 
 	void nsw_tracker::announce(sha1_hash const& ih, int listen_port, int flags
 		, std::function<void(std::vector<tcp::endpoint> const&)> f)
@@ -143,105 +143,105 @@ namespace {
 
 	namespace {
 
-	struct get_immutable_item_ctx
-	{
-		explicit get_immutable_item_ctx(int traversals)
-			: active_traversals(traversals)
-			, item_posted(false)
-		{}
-		int active_traversals;
-		bool item_posted;
-	};
+	// struct get_immutable_item_ctx
+	// {
+	// 	explicit get_immutable_item_ctx(int traversals)
+	// 		: active_traversals(traversals)
+	// 		, item_posted(false)
+	// 	{}
+	// 	int active_traversals;
+	// 	bool item_posted;
+	// };
 
-	void get_immutable_item_callback(item const& it, std::shared_ptr<get_immutable_item_ctx> ctx
-		, std::function<void(item const&)> f)
-	{
-		(void)it;
-		(void)ctx;
-		(void)f;
-	}
+	// void get_immutable_item_callback(item const& it, std::shared_ptr<get_immutable_item_ctx> ctx
+	// 	, std::function<void(item const&)> f)
+	// {
+	// 	(void)it;
+	// 	(void)ctx;
+	// 	(void)f;
+	// }
 
-	struct get_mutable_item_ctx
-	{
-		explicit get_mutable_item_ctx(int traversals) : active_traversals(traversals) {}
-		int active_traversals;
-		item it;
-	};
+	// struct get_mutable_item_ctx
+	// {
+	// 	explicit get_mutable_item_ctx(int traversals) : active_traversals(traversals) {}
+	// 	int active_traversals;
+	// 	item it;
+	// };
 
-	void get_mutable_item_callback(item const& it, bool authoritative
-		, std::shared_ptr<get_mutable_item_ctx> ctx
-		, std::function<void(item const&, bool)> f)
-	{
-		(void)it;
-		(void)authoritative;
-		(void)ctx;
-		(void)f;
-	}
+	// void get_mutable_item_callback(item const& it, bool authoritative
+	// 	, std::shared_ptr<get_mutable_item_ctx> ctx
+	// 	, std::function<void(item const&, bool)> f)
+	// {
+	// 	(void)it;
+	// 	(void)authoritative;
+	// 	(void)ctx;
+	// 	(void)f;
+	// }
 
-	struct put_item_ctx
-	{
-		explicit put_item_ctx(int traversals)
-			: active_traversals(traversals)
-			, response_count(0)
-		{}
+	// struct put_item_ctx
+	// {
+	// 	explicit put_item_ctx(int traversals)
+	// 		: active_traversals(traversals)
+	// 		, response_count(0)
+	// 	{}
 
-		int active_traversals;
-		int response_count;
-	};
+	// 	int active_traversals;
+	// 	int response_count;
+	// };
 
-	void put_immutable_item_callback(int responses, std::shared_ptr<put_item_ctx> ctx
-		, std::function<void(int)> f)
-	{
-		(void) responses;
-		(void)ctx;
-		(void)f;
-	}
+	// void put_immutable_item_callback(int responses, std::shared_ptr<put_item_ctx> ctx
+	// 	, std::function<void(int)> f)
+	// {
+	// 	(void) responses;
+	// 	(void)ctx;
+	// 	(void)f;
+	// }
 
-	void put_mutable_item_callback(item const& it, int responses, std::shared_ptr<put_item_ctx> ctx
-		, std::function<void(item const&, int)> cb)
-	{
-		(void)it;
-		(void)responses;
-		(void)ctx;
-		(void)cb;
-	}
+	// void put_mutable_item_callback(item const& it, int responses, std::shared_ptr<put_item_ctx> ctx
+	// 	, std::function<void(item const&, int)> cb)
+	// {
+	// 	(void)it;
+	// 	(void)responses;
+	// 	(void)ctx;
+	// 	(void)cb;
+	// }
 
 	} // anonymous namespace
 
-	void nsw_tracker::get_item(sha1_hash const& target
-		, std::function<void(item const&)> cb)
-	{
-		(void)target;
-		(void)cb;
-	}
+	// void nsw_tracker::get_item(sha1_hash const& target
+	// 	, std::function<void(item const&)> cb)
+	// {
+	// 	(void)target;
+	// 	(void)cb;
+	// }
 
 	// key is a 32-byte binary string, the public key to look up.
 	// the salt is optional
-	void nsw_tracker::get_item(public_key const& key
-		, std::function<void(item const&, bool)> cb
-		, std::string salt)
-	{
-		(void)key;
-		(void)cb;
-		(void)salt;
-	}
+	// void nsw_tracker::get_item(public_key const& key
+	// 	, std::function<void(item const&, bool)> cb
+	// 	, std::string salt)
+	// {
+	// 	(void)key;
+	// 	(void)cb;
+	// 	(void)salt;
+	// }
 
-	void nsw_tracker::put_item(entry const& data
-		, std::function<void(int)> cb)
-	{
-		(void)data;
-		(void)cb;
-	}
+	// void nsw_tracker::put_item(entry const& data
+	// 	, std::function<void(int)> cb)
+	// {
+	// 	(void)data;
+	// 	(void)cb;
+	// }
 
-	void nsw_tracker::put_item(public_key const& key
-		, std::function<void(item const&, int)> cb
-		, std::function<void(item&)> data_cb, std::string salt)
-	{
-		(void)key;
-		(void)cb;
-		(void)data_cb;
-		(void)salt;
-	}
+	// void nsw_tracker::put_item(public_key const& key
+	// 	, std::function<void(item const&, int)> cb
+	// 	, std::function<void(item&)> data_cb, std::string salt)
+	// {
+	// 	(void)key;
+	// 	(void)cb;
+	// 	(void)data_cb;
+	// 	(void)salt;
+	// }
 
 	void nsw_tracker::direct_request(udp::endpoint const& ep, entry& e
 		, std::function<void(msg const&)> f)

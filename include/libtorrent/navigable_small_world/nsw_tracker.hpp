@@ -10,7 +10,7 @@
 #include <libtorrent/deadline_timer.hpp>
 #include <libtorrent/span.hpp>
 #include <libtorrent/io_service.hpp>
-
+#include <libtorrent/bdecode.hpp>
 
 namespace libtorrent
 {
@@ -36,7 +36,7 @@ struct TORRENT_EXTRA_EXPORT nsw_tracker final
 			, send_fun_t const& send_fun
 			, nsw_settings const& settings
 			, counters& cnt
-			, nsw_storage_interface& storage
+//			, nsw_storage_interface& storage
 			, nsw_state state);
 		virtual ~nsw_tracker();
 
@@ -57,19 +57,19 @@ struct TORRENT_EXTRA_EXPORT nsw_tracker final
 		void announce(sha1_hash const& ih, int listen_port, int flags
 			, std::function<void(std::vector<tcp::endpoint> const&)> f);
 
-		void get_item(sha1_hash const& target
-			, std::function<void(item const&)> cb);
+		// void get_item(sha1_hash const& target
+		// 	, std::function<void(item const&)> cb);
 
-		void get_item(public_key const& key
-			, std::function<void(item const&, bool)> cb
-			, std::string salt = std::string());
+		// void get_item(public_key const& key
+		// 	, std::function<void(item const&, bool)> cb
+		// 	, std::string salt = std::string());
 
-		void put_item(entry const& data
-			, std::function<void(int)> cb);
+		// void put_item(entry const& data
+		// 	, std::function<void(int)> cb);
 
-		void put_item(public_key const& key
-			, std::function<void(item const&, int)> cb
-			, std::function<void(item&)> data_cb, std::string salt = std::string());
+		// void put_item(public_key const& key
+		// 	, std::function<void(item const&, int)> cb
+		// 	, std::function<void(item&)> data_cb, std::string salt = std::string());
 
 		void direct_request(udp::endpoint const& ep, entry& e
 			, std::function<void(msg const&)> f);
@@ -100,7 +100,7 @@ struct TORRENT_EXTRA_EXPORT nsw_tracker final
 		bdecode_node m_msg;
 
 		counters& m_counters;
-		nsw_storage_interface& m_storage;
+//		nsw_storage_interface& m_storage;
 		nsw_state m_state; // to be used only once
 		node m_nsw;
 #if TORRENT_USE_IPV6

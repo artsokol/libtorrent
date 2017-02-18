@@ -36,7 +36,6 @@ endif
 if ENABLE_NSW
 NSW_SOURCES = \
   navigable_small_world/nsw_state.cpp        \
-  navigable_small_world/nsw_storage.cpp      \
   navigable_small_world/nsw_tracker.cpp      \
   navigable_small_world/msg.cpp              \
   navigable_small_world/node.cpp             \
@@ -46,8 +45,9 @@ NSW_SOURCES = \
   navigable_small_world/observer_interface.cpp \
   navigable_small_world/rpc_manager.cpp      \
   navigable_small_world/traversal_algorithm.cpp \
-  navigable_small_world/item.cpp             \
   navigable_small_world/term_vector.cpp
+# navigable_small_world/nsw_storage.cpp
+# navigable_small_world/item.cpp
 endif
 
 if ! WITH_OPENSSL

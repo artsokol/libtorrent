@@ -7,11 +7,11 @@
 #include <cstdint>
 
 #include <libtorrent/config.hpp>
-#include <libtorrent/navigable_small_world/nsw_storage.hpp>
+//#include <libtorrent/navigable_small_world/nsw_storage.hpp>
 #include <libtorrent/navigable_small_world/nsw_routing_table.hpp>
 #include <libtorrent/navigable_small_world/rpc_manager.hpp>
 #include <libtorrent/navigable_small_world/node_id.hpp>
-#include <libtorrent/navigable_small_world/item.hpp>
+//#include <libtorrent/navigable_small_world/item.hpp>
 #include <libtorrent/navigable_small_world/term_vector.hpp>
 
 #include <libtorrent/socket.hpp>
@@ -60,8 +60,8 @@ public:
 		, libtorrent::nsw_settings const& settings
 		, node_id const& nid
 		, nsw_logger_observer_interface* observer, counters& cnt
-		, std::map<std::string, node*> const& nodes
-		, nsw_storage_interface& storage);
+		, std::map<std::string, node*> const& nodes);
+//		, nsw_storage_interface& storage);
 
 	~node();
 
@@ -77,8 +77,8 @@ public:
 	void incoming(msg const& m);
 
 #ifndef TORRENT_NO_DEPRECATE
-	int num_torrents() const { return int(m_storage.num_torrents()); }
-	int num_peers() const { return int(m_storage.num_peers()); }
+//	int num_torrents() const { return int(m_storage.num_torrents()); }
+//	int num_peers() const { return int(m_storage.num_peers()); }
 #endif
 
 	int bucket_size(int bucket);
@@ -94,7 +94,7 @@ public:
 	{ return m_table.num_global_nodes(); }
 
 #ifndef TORRENT_NO_DEPRECATE
-	int data_size() const { return int(m_storage.num_torrents()); }
+//	int data_size() const { return int(m_storage.num_torrents()); }
 #endif
 
 	enum flags_t { flag_seed = 1, flag_implied_port = 2 };
@@ -108,13 +108,13 @@ public:
 	void direct_request(udp::endpoint const& ep, entry& e
 		, std::function<void(msg const&)> f);
 
-	void get_item(sha1_hash const& target, std::function<void(item const&)> f);
-	void get_item(public_key const& pk, std::string const& salt, std::function<void(item const&, bool)> f);
+//	void get_item(sha1_hash const& target, std::function<void(item const&)> f);
+//	void get_item(public_key const& pk, std::string const& salt, std::function<void(item const&, bool)> f);
 
-	void put_item(sha1_hash const& target, entry const& data, std::function<void(int)> f);
-	void put_item(public_key const& pk, std::string const& salt
-		, std::function<void(item const&, int)> f
-		, std::function<void(item&)> data_cb);
+//	void put_item(sha1_hash const& target, entry const& data, std::function<void(int)> f);
+//	void put_item(public_key const& pk, std::string const& salt
+//		, std::function<void(item const&, int)> f
+//		, std::function<void(item&)> data_cb);
 
 	bool verify_token(string_view token, sha1_hash const& info_hash
 	, udp::endpoint const& addr) const;
@@ -220,7 +220,7 @@ private:
 	udp_socket_interface* m_sock;
 	counters& m_counters;
 
-	nsw_storage_interface& m_storage;
+//	nsw_storage_interface& m_storage;
 
 public:
 	boost::unordered::unordered_map<sha1_hash,boost::shared_ptr<nsw::term_vector> > m_torrents_term_vectors;
