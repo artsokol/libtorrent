@@ -1,7 +1,7 @@
 #include "libtorrent/navigable_small_world/nsw_state.hpp"
 
-#include <libtorrent/bdecode.hpp>
-#include <libtorrent/socket_io.hpp>
+#include "libtorrent/bdecode.hpp"
+#include "libtorrent/socket_io.hpp"
 
 namespace libtorrent {
 namespace nsw

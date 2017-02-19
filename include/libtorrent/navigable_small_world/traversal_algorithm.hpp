@@ -5,10 +5,10 @@
 #include <set>
 #include <memory>
 
-#include <libtorrent/navigable_small_world/node_id.hpp>
-#include <libtorrent/navigable_small_world/nsw_routing_table.hpp>
-#include <libtorrent/navigable_small_world/observer_interface.hpp>
-#include <libtorrent/address.hpp>
+#include "libtorrent/navigable_small_world/node_id.hpp"
+#include "libtorrent/navigable_small_world/nsw_routing_table.hpp"
+#include "libtorrent/navigable_small_world/observer_interface.hpp"
+#include "libtorrent/address.hpp"
 
 #include "libtorrent/aux_/disable_warnings_push.hpp"
 #include <boost/noncopyable.hpp>

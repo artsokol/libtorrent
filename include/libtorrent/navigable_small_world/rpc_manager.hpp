@@ -4,21 +4,21 @@
 #include <unordered_map>
 #include <cstdint>
 
-#include "libtorrent/aux_/disable_warnings_push.hpp"
 #include <boost/pool/pool.hpp>
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 #include "libtorrent/aux_/disable_warnings_pop.hpp"
 
-#include <libtorrent/socket.hpp>
-#include <libtorrent/time.hpp>
-#include <libtorrent/navigable_small_world/node_id.hpp>
-#include <libtorrent/navigable_small_world/observer_interface.hpp>
+#include "libtorrent/socket.hpp"
+#include "libtorrent/time.hpp"
+#include "libtorrent/navigable_small_world/node_id.hpp"
+#include "libtorrent/navigable_small_world/observer_interface.hpp"
 
 
 namespace libtorrent
 {
 	struct nsw_settings;
 	class entry;
-
 }
 
 namespace libtorrent { namespace nsw
@@ -26,7 +26,6 @@ namespace libtorrent { namespace nsw
 
 struct nsw_logger_interface;
 struct udp_socket_interface;
-struct traversal_algorithm;
 
 class TORRENT_EXTRA_EXPORT null_observer : public observer_interface
 {

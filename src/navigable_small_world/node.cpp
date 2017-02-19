@@ -10,13 +10,13 @@
 #include "libtorrent/hex.hpp"
 #endif
 
-#include <libtorrent/socket_io.hpp>
-#include <libtorrent/session_status.hpp>
+#include "libtorrent/socket_io.hpp"
+#include "libtorrent/session_status.hpp"
 #include "libtorrent/bencode.hpp"
 #include "libtorrent/hasher.hpp"
 #include "libtorrent/random.hpp"
-#include <libtorrent/assert.hpp>
-#include <libtorrent/aux_/time.hpp>
+#include "libtorrent/assert.hpp"
+#include "libtorrent/aux_/time.hpp"
 #include "libtorrent/alert_types.hpp"
 #include "libtorrent/performance_counters.hpp"
 

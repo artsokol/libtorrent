@@ -1,11 +1,11 @@
 #ifndef LIBTORRENT_NSW_STATE_HPP
 #define LIBTORRENT_NSW_STATE_HPP
 
-#include <libtorrent/config.hpp>
-#include <libtorrent/socket.hpp>
-#include <libtorrent/entry.hpp>
+#include "libtorrent/config.hpp"
+#include "libtorrent/socket.hpp"
+#include "libtorrent/entry.hpp"
 
-#include <libtorrent/navigable_small_world/node_id.hpp>
+#include "libtorrent/navigable_small_world/node_id.hpp"
 
 #include <vector>
 

@@ -6,17 +6,15 @@
 #include <mutex>
 #include <cstdint>
 
-#include <libtorrent/config.hpp>
-//#include <libtorrent/navigable_small_world/nsw_storage.hpp>
-#include <libtorrent/navigable_small_world/nsw_routing_table.hpp>
-#include <libtorrent/navigable_small_world/rpc_manager.hpp>
-#include <libtorrent/navigable_small_world/node_id.hpp>
-//#include <libtorrent/navigable_small_world/item.hpp>
-#include <libtorrent/navigable_small_world/term_vector.hpp>
+#include "libtorrent/config.hpp"
+#include "libtorrent/navigable_small_world/nsw_routing_table.hpp"
+#include "libtorrent/navigable_small_world/rpc_manager.hpp"
+#include "libtorrent/navigable_small_world/node_id.hpp"
+#include "libtorrent/navigable_small_world/term_vector.hpp"
 
-#include <libtorrent/socket.hpp>
-#include <libtorrent/string_view.hpp>
-#include <libtorrent/alert_types.hpp>
+#include "libtorrent/socket.hpp"
+#include "libtorrent/string_view.hpp"
+#include "libtorrent/alert_types.hpp"
 
 
 namespace libtorrent {

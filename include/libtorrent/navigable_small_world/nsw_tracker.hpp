@@ -4,13 +4,13 @@
 #include <functional>
 
 #include "libtorrent/navigable_small_world/node.hpp"
-#include <libtorrent/navigable_small_world/nsw_state.hpp>
+#include "libtorrent/navigable_small_world/nsw_state.hpp"
 
-#include <libtorrent/socket.hpp>
-#include <libtorrent/deadline_timer.hpp>
-#include <libtorrent/span.hpp>
-#include <libtorrent/io_service.hpp>
-#include <libtorrent/bdecode.hpp>
+#include "libtorrent/socket.hpp"
+#include "libtorrent/deadline_timer.hpp"
+#include "libtorrent/span.hpp"
+#include "libtorrent/io_service.hpp"
+#include "libtorrent/bdecode.hpp"
 
 namespace libtorrent
 {

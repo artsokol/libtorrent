@@ -1,14 +1,14 @@
-#include <libtorrent/navigable_small_world/traversal_algorithm.hpp>
-#include <libtorrent/navigable_small_world/rpc_manager.hpp>
-#include <libtorrent/navigable_small_world/node.hpp>
-#include <libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp>
-#include <libtorrent/session_status.hpp>
-#include <libtorrent/socket_io.hpp> // for read_*_endpoint
-#include <libtorrent/alert_types.hpp> // for dht_lookup
-#include <libtorrent/aux_/time.hpp>
+#include "libtorrent/navigable_small_world/traversal_algorithm.hpp"
+#include "libtorrent/navigable_small_world/rpc_manager.hpp"
+#include "libtorrent/navigable_small_world/node.hpp"
+#include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
+#include "libtorrent/session_status.hpp"
+#include "libtorrent/socket_io.hpp" // for read_*_endpoint
+#include "libtorrent/alert_types.hpp" // for nsw_lookup
+#include "libtorrent/aux_/time.hpp"
 
 #ifndef TORRENT_DISABLE_LOGGING
-#include <libtorrent/hex.hpp>
+#include "libtorrent/hex.hpp"
 #endif
 using namespace std::placeholders;
 

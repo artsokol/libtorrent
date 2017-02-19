@@ -1,16 +1,15 @@
-#include <libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp>
-#include <libtorrent/navigable_small_world/observer_interface.hpp>
-#include <libtorrent/navigable_small_world/traversal_algorithm.hpp>
-#include <libtorrent/navigable_small_world/node.hpp>
+#include "libtorrent/navigable_small_world/observer_interface.hpp"
+#include "libtorrent/navigable_small_world/traversal_algorithm.hpp"
+#include "libtorrent/navigable_small_world/node.hpp"
 
 namespace libtorrent { namespace nsw {
 
-inline nsw_logger_observer_interface* observer_interface::get_observer() const
+nsw_logger_observer_interface* observer_interface::get_observer() const
 {
     return m_algorithm->get_node().observer();
 }
 
-inline void observer_interface::set_target(udp::endpoint const& ep)
+void observer_interface::set_target(udp::endpoint const& ep)
 {
     m_sent = clock_type::now();
 
@@ -29,7 +28,7 @@ inline void observer_interface::set_target(udp::endpoint const& ep)
     }
 }
 
-inline address observer_interface::target_addr() const
+address observer_interface::target_addr() const
 {
 #if TORRENT_USE_IPV6
     if (flags & flag_ipv6_address)
@@ -39,39 +38,39 @@ inline address observer_interface::target_addr() const
         return address_v4(m_addr.v4);
 }
 
-inline udp::endpoint observer_interface::target_ep() const
+udp::endpoint observer_interface::target_ep() const
 {
     return udp::endpoint(target_addr(), m_port);
 }
 
-inline void observer_interface::abort()
+void observer_interface::abort()
 {
     if (flags & flag_done) return;
     flags |= flag_done;
     m_algorithm->failed(self(), traversal_algorithm::prevent_request);
 }
 
-inline void observer_interface::done()
+void observer_interface::done()
 {
     if (flags & flag_done) return;
     flags |= flag_done;
     m_algorithm->finished(self());
 }
 
-inline void observer_interface::short_timeout()
+void observer_interface::short_timeout()
 {
     if (flags & flag_short_timeout) return;
     m_algorithm->failed(self(), traversal_algorithm::short_timeout);
 }
 
-inline void observer_interface::timeout()
+void observer_interface::timeout()
 {
     if (flags & flag_done) return;
     flags |= flag_done;
     m_algorithm->failed(self());
 }
 
-inline void observer_interface::set_id(node_id const& id)
+void observer_interface::set_id(node_id const& id)
 {
     if (m_id == id) return;
     m_id = id;

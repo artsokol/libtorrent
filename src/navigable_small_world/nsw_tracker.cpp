@@ -1,20 +1,20 @@
 #include "libtorrent/navigable_small_world/nsw_tracker.hpp"
 
-#include <libtorrent/config.hpp>
+#include "libtorrent/config.hpp"
 
-#include <libtorrent/navigable_small_world/msg.hpp>
-#include <libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp>
+#include "libtorrent/navigable_small_world/msg.hpp"
+#include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
 
-#include <libtorrent/bencode.hpp>
-#include <libtorrent/version.hpp>
-#include <libtorrent/time.hpp>
-#include <libtorrent/performance_counters.hpp>
-#include <libtorrent/aux_/time.hpp>
-#include <libtorrent/session_status.hpp>
-#include <libtorrent/session_settings.hpp>
+#include "libtorrent/bencode.hpp"
+#include "libtorrent/version.hpp"
+#include "libtorrent/time.hpp"
+#include "libtorrent/performance_counters.hpp"
+#include "libtorrent/aux_/time.hpp"
+#include "libtorrent/session_status.hpp"
+#include "libtorrent/session_settings.hpp"
 
 #ifndef TORRENT_DISABLE_LOGGING
-#include <libtorrent/hex.hpp>
+#include "libtorrent/hex.hpp"
 #endif
 
 using namespace std::placeholders;

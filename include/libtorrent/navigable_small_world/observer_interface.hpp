@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <memory>
 
-#include <libtorrent/navigable_small_world/node_id.hpp>
-#include <libtorrent/navigable_small_world/msg.hpp>
-#include <libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp>
-#include <libtorrent/time.hpp>
-#include <libtorrent/address.hpp>
+#include "libtorrent/navigable_small_world/node_id.hpp"
+#include "libtorrent/navigable_small_world/msg.hpp"
+#include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
+#include "libtorrent/time.hpp"
+#include "libtorrent/address.hpp"
 
 namespace libtorrent { namespace nsw {
 

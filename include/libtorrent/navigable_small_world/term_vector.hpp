@@ -7,7 +7,7 @@
 
 #include <boost/unordered_map.hpp>
 
-#include <libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp>
+#include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
 #include "libtorrent/sha1_hash.hpp"
 
 namespace libtorrent {

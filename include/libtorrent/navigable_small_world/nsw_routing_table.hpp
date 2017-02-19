@@ -9,11 +9,11 @@
 #include <tuple>
 #include <array>
 
-#include <libtorrent/navigable_small_world/node_id.hpp>
-#include <libtorrent/navigable_small_world/node_entry.hpp>
-#include <libtorrent/session_settings.hpp>
-#include <libtorrent/assert.hpp>
-#include <libtorrent/time.hpp>
+#include "libtorrent/navigable_small_world/node_id.hpp"
+#include "libtorrent/navigable_small_world/node_entry.hpp"
+#include "libtorrent/session_settings.hpp"
+#include "libtorrent/assert.hpp"
+#include "libtorrent/time.hpp"
 
 namespace libtorrent
 {
