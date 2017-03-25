@@ -2510,8 +2510,25 @@ namespace libtorrent
 	{
 		// string literal indicating which kind of lookup this is
 		char const* type;
+		// the total number of requests that have timed out so far
+		// for this lookup
+		int timeouts;
+		// the total number of responses we have received for this
+		// lookup so far for this lookup
+		int responses;
 		// the node-id or info-hash target for this lookup
 		sha1_hash target;
+	};
+
+	// struct to hold information about a single NSW routing table
+	struct TORRENT_EXPORT nsw_routing_info
+	{
+		// the total number of nodes in the routing table
+		size_t num_nodes;
+		// number of nodes moved into long link list
+		size_t num_long_links;
+		// number of seconds since last activity
+		size_t last_active;
 	};
 
 #undef TORRENT_DEFINE_ALERT_IMPL

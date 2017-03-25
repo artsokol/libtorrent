@@ -19,7 +19,7 @@
 
 namespace libtorrent {
 	struct counters;
-	struct nsw_routing_bucket;
+//	struct nsw_routing_bucket;
 	struct nsw_settings;
 }
 
@@ -57,6 +57,7 @@ public:
 	node(udp proto, udp_socket_interface* sock
 		, libtorrent::nsw_settings const& settings
 		, node_id const& nid
+		, const std::string& description
 		, nsw_logger_observer_interface* observer, counters& cnt
 		, std::map<std::string, node*> const& nodes);
 //		, nsw_storage_interface& storage);
@@ -88,12 +89,13 @@ public:
 #endif
 
 	//std::tuple<int, int, int> size() const { return m_table.size(); }
-	std::int64_t num_global_nodes() const
-	{ return m_table.num_global_nodes(); }
 
-#ifndef TORRENT_NO_DEPRECATE
-//	int data_size() const { return int(m_storage.num_torrents()); }
-#endif
+
+
+	// std::int64_t num_global_nodes() const
+	// { return m_table.num_global_nodes(); }
+
+
 
 	enum flags_t { flag_seed = 1, flag_implied_port = 2 };
 	void get_peers(sha1_hash const& info_hash
@@ -106,13 +108,7 @@ public:
 	void direct_request(udp::endpoint const& ep, entry& e
 		, std::function<void(msg const&)> f);
 
-//	void get_item(sha1_hash const& target, std::function<void(item const&)> f);
-//	void get_item(public_key const& pk, std::string const& salt, std::function<void(item const&, bool)> f);
 
-//	void put_item(sha1_hash const& target, entry const& data, std::function<void(int)> f);
-//	void put_item(public_key const& pk, std::string const& salt
-//		, std::function<void(item const&, int)> f
-//		, std::function<void(item&)> data_cb);
 
 	bool verify_token(string_view token, sha1_hash const& info_hash
 	, udp::endpoint const& addr) const;
@@ -124,9 +120,9 @@ public:
 	void new_write_key();
 
 	void add_node(udp::endpoint const& node);
-
-	void replacement_cache(bucket_t& nodes) const
-	{ m_table.replacement_cache(nodes); }
+	// to doublecheck!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// void replacement_cache(routing_table_t& nodes) const
+	// { m_table.replacement_cache(nodes); }
 
 	void add_traversal_algorithm(traversal_algorithm* a)
 	{
@@ -140,14 +136,10 @@ public:
 		m_running_requests.erase(a);
 	}
 
-	void status(std::vector<nsw_routing_bucket>& table
-		, std::vector<nsw_lookup>& requests);
+	// void status(std::vector<nsw_routing_bucket>& table
+	// 	, std::vector<nsw_lookup>& requests);
 
 	std::tuple<int, int, int> get_stats_counters() const;
-
-#ifndef TORRENT_NO_DEPRECATE
-	void status(libtorrent::session_status& s);
-#endif
 
 	libtorrent::nsw_settings const& settings() const { return m_settings; }
 	counters& stats_counters() const { return m_counters; }

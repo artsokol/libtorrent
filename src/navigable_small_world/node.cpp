@@ -50,13 +50,14 @@ void incoming_error(entry& e, char const* msg, int error_code = 203)
 node::node(udp proto, udp_socket_interface* sock
 	, nsw_settings const& settings
 	, node_id const& nid
+	, std::string const& description
 	, nsw_logger_observer_interface* observer
 	, counters& cnt
 	, std::map<std::string, node*> const& nodes)
 //	, nsw_storage_interface& storage)
 	: m_settings(settings)
 	, m_id(calculate_node_id(nid, observer, proto))
-	, m_table(m_id, proto, 8, settings, observer)
+	, m_table(m_id, proto, 8, settings, description, observer)
 	, m_rpc(m_id, m_settings, m_table, sock, observer)
 	, m_nodes(nodes)
 	, m_observer(observer)
@@ -67,7 +68,6 @@ node::node(udp proto, udp_socket_interface* sock
 	, m_counters(cnt)
 //	, m_storage(storage)
 {
-
 }
 
 node::~node() = default;
@@ -234,18 +234,12 @@ time_duration node::connection_timeout()
 	return d;
 }
 
-void node::status(std::vector<nsw_routing_bucket>& table
-	, std::vector<nsw_lookup>& requests)
-{
+// void node::status(std::vector<nsw_routing_bucket>& table
+// 	, std::vector<nsw_lookup>& requests)
+// {
 
-}
+// }
 
-#ifndef TORRENT_NO_DEPRECATE
-void node::status(session_status& s)
-{
-	(void)s;
-}
-#endif
 
 bool node::lookup_peers(sha1_hash const& info_hash, entry& reply
 	, bool noseed, bool scrape, address const& requester) const

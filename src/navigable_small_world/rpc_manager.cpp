@@ -134,7 +134,7 @@ bool rpc_manager::incoming(msg const& m, node_id* id)
 	if (!o)
 	{
 #ifndef TORRENT_DISABLE_LOGGING
-		if (m_table.native_endpoint(m.addr) && m_log->should_log(nsw_logger_interface::rpc_manager))
+		if (m_table.is_native_endpoint(m.addr) && m_log->should_log(nsw_logger_interface::rpc_manager))
 		{
 			m_log->log(nsw_logger_interface::rpc_manager, "reply with unknown transaction id size: %d from %s"
 				, int(transaction_id.size()), print_endpoint(m.addr).c_str());

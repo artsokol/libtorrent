@@ -125,4 +125,18 @@ double term_vector::getSimilarityWith(const term_vector& vecObject)
 
 }
 
+double term_vector::getSimilarity(const std::wstring& textString1, const std::wstring& textString2)
+{
+    (void)textString1;
+    (void)textString2;
+    return 0.0;
+}
+
+double term_vector::getSimilarity(const std::string& textString1, const std::string& textString2)
+{
+    (void)textString1;
+    (void)textString2;
+    return 0.0;
+}
+
 }}

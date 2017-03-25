@@ -1,4 +1,3 @@
-
 #ifndef NSW_ROUTING_TABLE_HPP
 #define NSW_ROUTING_TABLE_HPP
 
@@ -11,29 +10,28 @@
 
 #include "libtorrent/navigable_small_world/node_id.hpp"
 #include "libtorrent/navigable_small_world/node_entry.hpp"
+#include "libtorrent/navigable_small_world/term_vector.hpp"
 #include "libtorrent/session_settings.hpp"
 #include "libtorrent/assert.hpp"
 #include "libtorrent/time.hpp"
 
-namespace libtorrent
-{
-#ifndef TORRENT_NO_DEPRECATE
-	struct session_status;
-#endif
-	struct nsw_routing_bucket;
-}
+// namespace libtorrent
+// {
+// 	struct nsw_routing_vector;
+// }
 
 namespace libtorrent { namespace nsw
 {
 struct nsw_logger_interface;
 
-typedef std::vector<node_entry> bucket_t;
 
-struct routing_table_node
+using routing_table_t = std::vector<node_entry> ;
+
+typedef struct nsw_routing_info
 {
-	bucket_t replacements;
-	bucket_t live_nodes;
-};
+	uint32_t num_nodes;
+	uint32_t num_long_links;
+} nsw_routing_info;
 
 struct ipv4_hash
 {
@@ -41,6 +39,7 @@ struct ipv4_hash
 	using result_type = std::size_t;
 	result_type operator()(argument_type const& ip) const
 	{
+		// strange expression &ip[0] is just cast error avoiding
 		return std::hash<std::uint32_t>()(*reinterpret_cast<std::uint32_t const*>(&ip[0]));
 	}
 };
@@ -52,40 +51,11 @@ struct ipv6_hash
 	using result_type = std::size_t;
 	result_type operator()(argument_type const& ip) const
 	{
+		// strange expression &ip[0] is just cast error avoiding
 		return std::hash<std::uint64_t>()(*reinterpret_cast<std::uint64_t const*>(&ip[0]));
 	}
 };
 #endif
-
-struct ip_set
-{
-	void insert(address const& addr);
-	bool exists(address const& addr) const;
-	void erase(address const& addr);
-
-	void clear()
-	{
-		m_ip4s.clear();
-#if TORRENT_USE_IPV6
-		m_ip6s.clear();
-#endif
-	}
-
-	bool operator==(ip_set const& rh)
-	{
-#if TORRENT_USE_IPV6
-		return m_ip4s == rh.m_ip4s && m_ip6s == rh.m_ip6s;
-#else
-		return m_ip4s == rh.m_ip4s;
-#endif
-	}
-
-
-	std::unordered_multiset<address_v4::bytes_type, ipv4_hash> m_ip4s;
-#if TORRENT_USE_IPV6
-	std::unordered_multiset<address_v6::bytes_type, ipv6_hash> m_ip6s;
-#endif
-};
 
 
 namespace impl
@@ -98,73 +68,125 @@ namespace impl
 	}
 }
 
-TORRENT_EXTRA_EXPORT bool compare_ip_cidr(address const& lhs, address const& rhs);
+	// auto textComp = [m_description](const std::string& a,
+	// 			const std::string& b
+	// 			)-> bool
+	// {
+ //        return term_vector::getSimilarity(a,m_description) >
+	// 			term_vector::getSimilarity(b,m_description);
+	// }
 
 class TORRENT_EXTRA_EXPORT routing_table
 {
-public:
+private:
 
-	using table_t = std::vector<routing_table_node>;
+	class textComp {
+	    std::string m_text;
+	public:
+	    textComp(const std::string text)
+	    :m_text(text)
+	    {}
+
+	    bool operator()(const std::string& a,
+					const std::string& b) {
+
+	        return term_vector::getSimilarity(a,m_text) >
+					term_vector::getSimilarity(b,m_text);
+	    }
+	};
+
+	using replacement_table_t = std::multimap<std::string,
+										node_entry,
+										textComp>;
+
+////////////////////////////////////////////////////////
+
+	uint32_t const m_neighbourhood_size;
+	// not used. For future restrictions
+	uint32_t const m_equal_text_max_nodes;
+	nsw_settings const& m_settings;
+
+	routing_table_t m_routing;
+
+	node_id m_id;
+	std::string m_description;
+	udp m_protocol;
+
+
+	mutable time_point m_last_self_refresh;
+
+	// this is a set of all the endpoints that have
+	// been identified as router nodes. They will
+	// be used in searches as gates, but they should not
+	// be added to the routing table.
+	std::set<udp::endpoint> m_router_nodes;
+
+	// stores short links
+	routing_table_t m_close_nodes_rt;
+	// and long links - friends who was closest some
+	// time ago but now are not. We should keep links
+	// to provide log() search complexity.
+	routing_table_t m_far_nodes_rt;
+
+	// nodes with term_vectors exact the same as in other
+	// tables. Need for quick replacements.
+	replacement_table_t m_replacement_nodes;
+#ifndef TORRENT_DISABLE_LOGGING
+	nsw_logger_interface* m_log;
+#endif
+
+
+public:
+	enum add_node_status_t {
+		failed_to_add = 0,
+		node_exists,
+		node_added
+	};
+	enum table_type_t {
+		none = -1,
+		closest_nodes = 0,
+		far_nodes
+	};
 
 	routing_table(node_id const& id, udp proto
-		, int bucket_size
+		, int neighbourhood_size
 		, nsw_settings const& settings
+		, std::string const& node_description
 		, nsw_logger_interface* log);
 
 	routing_table(routing_table const&) = delete;
 	routing_table& operator=(routing_table const&) = delete;
 
-#ifndef TORRENT_NO_DEPRECATE
-	void status(session_status& s) const;
-#endif
+	void status(nsw_routing_info& s) const;
 
-	void status(std::vector<nsw_routing_bucket>& s) const;
-
-	void node_failed(node_id const& id, udp::endpoint const& ep);
+	void node_failed(node_id const& nid, udp::endpoint const& ep);
 
 	void add_router_node(udp::endpoint const& router);
 
-
+	// iterates over the router nodes added
 	typedef std::set<udp::endpoint>::const_iterator router_iterator;
 	router_iterator begin() const { return m_router_nodes.begin(); }
 	router_iterator end() const { return m_router_nodes.end(); }
 
-	enum add_node_status_t {
-		failed_to_add = 0,
-		node_added,
-		need_bucket_split
-	};
+
 	add_node_status_t add_node_impl(node_entry e);
 
 	bool add_node(node_entry const& e);
 
 	bool node_seen(node_id const& id, udp::endpoint const& ep, int rtt);
 
-	void heard_about(node_id const& id, udp::endpoint const& ep);
+//	void heard_about(node_id const& id, udp::endpoint const& ep);
 
+	// change our node ID. This can be expensive since nodes must be moved around
+	// and potentially dropped
 	void update_node_id(node_id const& id);
 
-	node_entry const* next_refresh();
+	node_entry const*  next_refresh();
 
-	enum
-	{
-		include_failed = 1
-	};
 
-	void find_node(node_id const& id, std::vector<node_entry>& l
-		, int options, int count = 0);
+
 	void remove_node(node_entry* n
-		, table_t::iterator bucket) ;
-
-	int bucket_size(int bucket) const
-	{
-		int num_buckets = int(m_buckets.size());
-		if (num_buckets == 0) return 0;
-		if (bucket >= num_buckets) bucket = num_buckets - 1;
-		table_t::const_iterator i = m_buckets.begin();
-		std::advance(i, bucket);
-		return int(i->live_nodes.size());
-	}
+		, routing_table_t& rt) ;
 
 	template <typename F>
 	void for_each_node(F f)
@@ -175,75 +197,64 @@ public:
 	void for_each_node(void (*)(void*, node_entry const&)
 		, void (*)(void*, node_entry const&), void* userdata) const;
 
-	int bucket_size() const { return m_bucket_size; }
+	std::tuple<size_t, size_t, size_t> size() const;
 
-	std::tuple<int, int, int> size() const;
+	bool is_full() const;
 
-	std::int64_t num_global_nodes() const;
-
-	int depth() const;
-
-	int num_active_buckets() const { return int(m_buckets.size()); }
-
-	void replacement_cache(bucket_t& nodes) const;
-
-	int bucket_limit(int bucket) const;
-
-#if TORRENT_USE_INVARIANT_CHECKS
-	void check_invariant() const;
-#endif
-
-	bool is_full(int bucket) const;
-
-	bool native_address(address const& addr) const
+	bool is_native_address(address const& addr) const
 	{
 		return (addr.is_v4() && m_protocol == udp::v4())
 			|| (addr.is_v6() && m_protocol == udp::v6());
 	}
 
-	bool native_endpoint(udp::endpoint const& ep) const
+	bool is_native_endpoint(udp::endpoint const& ep) const
 	{ return ep.protocol() == m_protocol; }
 
 	node_id const& id() const
 	{ return m_id; }
 
-	table_t const& buckets() const
-	{ return m_buckets; }
+	routing_table_t const& neighbourhood() const
+	{ return m_close_nodes_rt; }
+
+	int neighbourhood_size() const { return m_neighbourhood_size; }
+
+//	std::int64_t num_global_nodes() const;
+
+//	int num_active_buckets() const { return int(m_buckets.size()); }
+
+//	void replacement_cache(bucket_t& nodes) const;
+
+//	int bucket_limit(int bucket) const;
+	// enum
+	// {
+	// 	// nodes that have not been pinged are considered failed by this flag
+	// 	include_failed = 1
+	// };
+
+	// fills the vector with the count nodes that
+	// are nearest to the given term vector.
+	// void find_node(std::string const& id
+	// 			, routing_table::table_type_t type
+	// 			, int index);
 
 private:
 
 #ifndef TORRENT_DISABLE_LOGGING
-	nsw_logger_interface* m_log;
 	void log_node_failed(node_id const& nid, node_entry const& ne) const;
+	void log_node_added(node_entry const& ne) const;
 #endif
 
-	table_t::iterator find_bucket(node_id const& id);
-	void remove_node_internal(node_entry* n, bucket_t& b);
+//	table_t::iterator find_bucket(node_id const& id);
+//	void remove_node_internal(node_entry* n, bucket_t& b);
 
-	void split_bucket();
+//	void split_bucket();
 
 	node_entry* find_node(udp::endpoint const& ep
-		, routing_table::table_t::iterator* bucket);
+							, routing_table::table_type_t& type
+							, int& index);
+	bool fill_from_replacements(node_entry& ne);
 
-	void fill_from_replacements(table_t::iterator bucket);
-
-	nsw_settings const& m_settings;
-
-	table_t m_buckets;
-
-	node_id m_id;
-	udp m_protocol;
-
-	mutable int m_depth;
-
-	mutable time_point m_last_self_refresh;
-
-	std::set<udp::endpoint> m_router_nodes;
-
-	ip_set m_ips;
-
-
-	int const m_bucket_size;
+	routing_table::add_node_status_t insert_node(const node_entry& e);
 };
 
 } } // namespace libtorrent::nsw

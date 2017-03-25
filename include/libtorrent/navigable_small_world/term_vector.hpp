@@ -17,6 +17,7 @@ namespace nsw
     Parse and store text as tf-idf vector (theoretical vector. storage is hash map)
     I have used common word tf-idf but idf always is 1 because this class for comparation for similarity two texts/documents.
 */
+
 class term_vector
 {
 private:
@@ -103,6 +104,8 @@ public:
 
     nsw_logger_observer_interface* observer() const { return m_observer; }
 
+    static double getSimilarity(const std::wstring& textString1, const std::wstring& textString2);
+    static double getSimilarity(const std::string& textString1, const std::string& textString2);
 private:
     double cosineSimilarity(const boost::unordered::unordered_map<std::wstring, double>&,const boost::unordered::unordered_map<std::wstring, double>& );
     //

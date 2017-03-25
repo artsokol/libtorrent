@@ -77,8 +77,8 @@ struct TORRENT_EXTRA_EXPORT nsw_tracker final
 #ifndef TORRENT_NO_DEPRECATE
 		void nsw_status(session_status& s);
 #endif
-		void nsw_status(std::vector<nsw_routing_bucket>& table
-			, std::vector<nsw_lookup>& requests);
+		// void nsw_status(std::vector<nsw_routing_bucket>& table
+		// 	, std::vector<nsw_lookup>& requests);
 		void update_stats_counters(counters& c) const;
 
 		void incoming_error(error_code const& ec, udp::endpoint const& ep);

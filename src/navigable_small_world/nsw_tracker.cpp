@@ -49,10 +49,10 @@ namespace {
 		: m_counters(cnt)
 //		, m_storage(storage)
 		, m_state(std::move(state))
-		, m_nsw(udp::v4(), this, settings, m_state.nid
+		, m_nsw(udp::v4(), this, settings, m_state.nid, ""
 			, observer, cnt, m_nodes)
 #if TORRENT_USE_IPV6
-		, m_nsw6(udp::v6(), this, settings, m_state.nid6
+		, m_nsw6(udp::v6(), this, settings, m_state.nid6, ""
 			, observer, cnt, m_nodes)
 #endif
 		, m_send_fun(send_fun)
@@ -93,12 +93,12 @@ namespace {
 	}
 #endif
 
-	void nsw_tracker::nsw_status(std::vector<nsw_routing_bucket>& table
-		, std::vector<nsw_lookup>& requests)
-	{
-		(void)table;
-		(void)requests;
-	}
+	// void nsw_tracker::nsw_status(std::vector<nsw_routing_bucket>& table
+	// 	, std::vector<nsw_lookup>& requests)
+	// {
+	// 	(void)table;
+	// 	(void)requests;
+	// }
 
 	void nsw_tracker::update_stats_counters(counters& c) const
 	{
