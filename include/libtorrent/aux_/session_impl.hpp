@@ -81,6 +81,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/extensions.hpp"
 #include "libtorrent/aux_/portmap.hpp"
 #include "libtorrent/aux_/lsd.hpp"
+#include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
 
 #ifndef TORRENT_NO_DEPRECATE
 #include "libtorrent/session_settings.hpp"
@@ -116,6 +117,11 @@ namespace libtorrent
 	{
 		struct dht_tracker;
 		class item;
+	}
+
+	namespace nsw
+	{
+		struct nsw_tracker;
 	}
 
 	struct listen_socket_t
@@ -215,6 +221,7 @@ namespace libtorrent
 		struct TORRENT_EXTRA_EXPORT session_impl final
 			: session_interface
 			, dht::dht_observer
+			, nsw::nsw_logger_observer_interface
 			, aux::portmap_callback
 			, aux::lsd_callback
 			, boost::noncopyable
@@ -627,6 +634,8 @@ namespace libtorrent
 			virtual void outgoing_get_peers(sha1_hash const& target
 				, sha1_hash const& sent_target, udp::endpoint const& ep) override;
 
+
+
 #ifndef TORRENT_DISABLE_LOGGING
 			virtual bool should_log(module_t m) const override;
 			virtual void log(module_t m, char const* fmt, ...)
@@ -648,6 +657,26 @@ namespace libtorrent
 			void set_external_address(address const& ip
 				, int source_type, address const& source) override;
 			virtual external_ip external_address() const override;
+
+
+			// implements nsw_observer
+			virtual void set_nsw_external_address(address const& ip
+				, address const& source) override;
+			virtual address external_nsw_address(udp proto) override;
+			virtual void get_friends(sha1_hash const& ih, std::string const& text) override;
+			virtual void outgoing_get_friends(sha1_hash const& nid
+				, std::string const& target, udp::endpoint const& ep) override;
+//			virtual bool on_add_friend_request(string_view query
+//				, nsw::msg const& request, entry& response) override;
+
+#ifndef TORRENT_DISABLE_LOGGING
+			virtual bool nsw_should_log(nsw_log_level_t m) const override;
+			virtual void nsw_log(nsw_log_level_t m, char const* fmt, ...)
+				override TORRENT_FORMAT(3,4);
+			virtual void nsw_log_packet(nsw_log_message_direction_t dir, span<char const> pkt
+				, udp::endpoint const& node) override;
+#endif
+
 
 			// used when posting synchronous function
 			// calls to session_impl and torrent objects
@@ -1047,6 +1076,21 @@ namespace libtorrent
 			// the number of DHT router lookups there are currently outstanding. As
 			// long as this is > 0, we'll postpone starting the DHT
 			int m_outstanding_router_lookups = 0;
+#endif
+
+#ifndef TORRENT_DISABLE_NSW
+//			std::unique_ptr<dht::dht_storage_interface> m_nsw_storage;
+			std::shared_ptr<nsw::nsw_tracker> m_nsw;
+			nsw_settings m_nsw_settings;
+			// nsw::dht_storage_constructor_type m_dht_storage_constructor
+			// 	= dht::dht_default_storage_constructor;
+
+			// // these are used when starting the DHT
+			// // (and bootstrapping it), and then erased
+			// std::vector<udp::endpoint> m_dht_router_nodes;
+
+			std::vector<udp::endpoint> m_nsw_nodes;
+
 #endif
 
 			void send_udp_packet_hostname(char const* hostname

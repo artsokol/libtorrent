@@ -74,6 +74,13 @@ void observer_interface::set_id(node_id const& id)
 {
     if (m_id == id) return;
     m_id = id;
+//    if (m_algorithm) m_algorithm->resort_results();
+}
+
+void observer_interface::set_descr(std::string const& descr)
+{
+    if (m_description == descr) return;
+    m_description = descr;
     if (m_algorithm) m_algorithm->resort_results();
 }
 
@@ -83,12 +90,12 @@ observer_interface::~observer_interface()
     // reported back to the traversal_algorithm as
     // well. If it wasn't sent, it cannot have been
     // reported back
-    TORRENT_ASSERT(m_was_sent == ((flags & flag_done) != 0) || m_was_abandoned);
-    TORRENT_ASSERT(!m_in_constructor);
-#if TORRENT_USE_ASSERTS
-    TORRENT_ASSERT(m_in_use);
-    m_in_use = false;
-#endif
+//     TORRENT_ASSERT(m_was_sent == ((flags & flag_done) != 0) || m_was_abandoned);
+//     TORRENT_ASSERT(!m_in_constructor);
+// #if TORRENT_USE_ASSERTS
+//     TORRENT_ASSERT(m_in_use);
+//     m_in_use = false;
+// #endif
 }
 
 }}

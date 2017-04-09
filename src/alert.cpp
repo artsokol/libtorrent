@@ -2150,4 +2150,164 @@ namespace libtorrent {
 		return buf;
 	}
 
+	nsw_log_alert::nsw_log_alert(aux::stack_allocator& alloc
+		, nsw_log_alert::nsw_log_level_t m, const char* fmt, va_list v)
+		: level(m)
+		, m_alloc(alloc)
+		, m_msg_idx(alloc.format_string(fmt, v))
+	{}
+
+	char const* nsw_log_alert::log_message() const
+	{
+		return m_alloc.get().ptr(m_msg_idx);
+	}
+
+	std::string nsw_log_alert::message() const
+	{
+		static char const* const nsw_log_levels[] =
+		{
+			"tracker",
+			"node",
+			"routing_table",
+			"rpc_manager",
+			"traversal"
+		};
+
+		char ret[900];
+		std::snprintf(ret, sizeof(ret), "NSW %s: %s", nsw_log_levels[level]
+			, log_message());
+		return ret;
+	}
+
+	nsw_pkt_alert::nsw_pkt_alert(aux::stack_allocator& alloc
+		, span<char const> buf
+		, nsw_pkt_alert::nsw_log_message_direction_t d
+		, udp::endpoint const& ep)
+		: direction(d)
+		, node(std::move(ep))
+		, m_alloc(alloc)
+		, m_msg_idx(alloc.copy_buffer(buf))
+		, m_size(int(buf.size()))
+	{}
+
+	span<char const> nsw_pkt_alert::pkt_buf() const
+	{
+		return {m_alloc.get().ptr(m_msg_idx), size_t(m_size)};
+	}
+
+	std::string nsw_pkt_alert::message() const
+	{
+		bdecode_node print;
+		error_code ec;
+
+		// ignore errors here. This is best-effort. It may be a broken encoding
+		// but at least we'll print the valid parts
+		span<char const> pkt = pkt_buf();
+		bdecode(pkt.data(), pkt.data() + int(pkt.size()), print, ec, nullptr, 100, 100);
+
+		std::string msg = print_entry(print, true);
+
+		char const* prefix[2] = { "<==", "==>"};
+		char buf[1024];
+		std::snprintf(buf, sizeof(buf), "%s [%s] %s", prefix[direction]
+			, print_endpoint(node).c_str(), msg.c_str());
+
+		return buf;
+	}
+
+	nsw_get_friends_reply_alert::nsw_get_friends_reply_alert(aux::stack_allocator& alloc
+		, sha1_hash const& ih
+		, std::vector<tcp::endpoint> const& friends)
+		: info_hash(ih)
+		, m_alloc(alloc)
+		, m_num_friends(int(friends.size()))
+	{
+		std::size_t total_size = friends.size(); // num bytes for sizes
+		for (auto const& endp : friends) {
+			total_size += endp.size();
+		}
+
+		m_friends_idx = alloc.allocate(int(total_size));
+
+		char *ptr = alloc.ptr(m_friends_idx);
+		for (auto const& endp : friends) {
+			std::size_t const size = endp.size();
+			TORRENT_ASSERT(size < 0x100);
+			detail::write_uint8(size, ptr);
+			std::memcpy(ptr, endp.data(), size);
+			ptr += size;
+		}
+	}
+
+	std::string nsw_get_friends_reply_alert::message() const
+	{
+		char msg[200];
+		std::snprintf(msg, sizeof(msg), "incoming nsw get_friends reply: %s, friends %d", aux::to_hex(info_hash).c_str(), m_num_friends);
+		return msg;
+	}
+
+	int nsw_get_friends_reply_alert::num_friends() const
+	{
+		return m_num_friends;
+	}
+
+
+	std::vector<tcp::endpoint> nsw_get_friends_reply_alert::friends() const {
+		std::vector<tcp::endpoint> friends(m_num_friends);
+
+		const char *ptr = m_alloc.get().ptr(m_friends_idx);
+		for (int i = 0; i < m_num_friends; i++) {
+			std::size_t size = detail::read_uint8(ptr);
+			std::memcpy(friends[i].data(), ptr, size);
+			ptr += size;
+		}
+
+		return friends;
+	}
+
+	nsw_bootstrap_done_alert::nsw_bootstrap_done_alert(aux::stack_allocator&)
+	{}
+
+	std::string nsw_bootstrap_done_alert::message() const
+	{
+		return "NSW bootstrap complete";
+	}
+
+	nsw_get_friends_alert::nsw_get_friends_alert(aux::stack_allocator&
+		, sha1_hash const& ih
+		, std::string const& text)
+		: info_hash(ih)
+		, target_text(text)
+	{}
+
+	std::string nsw_get_friends_alert::message() const
+	{
+		char msg[200];
+		std::snprintf(msg, sizeof(msg), "incoming nsw get_friends: %s text: %s"
+									, aux::to_hex(info_hash).c_str()
+									, target_text.c_str());
+		return msg;
+	}
+
+	nsw_outgoing_get_friends_alert::nsw_outgoing_get_friends_alert(aux::stack_allocator&
+		, sha1_hash const& ih
+		, std::string const& text
+		, udp::endpoint ep)
+		: info_hash(ih)
+		, target_text(text)
+		, endpoint(std::move(ep))
+	{}
+
+	std::string nsw_outgoing_get_friends_alert::message() const
+	{
+		char msg[600];
+
+		std::snprintf(msg, sizeof(msg), "outgoing nsw get_friends : %s(%s) -> %s"
+			, target_text.c_str()
+			, aux::to_hex(info_hash).c_str()
+			, print_endpoint(endpoint).c_str());
+		return msg;
+	}
+
+
 } // namespace libtorrent

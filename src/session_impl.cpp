@@ -99,7 +99,9 @@ const rlim_t rlim_infinity = RLIM_INFINITY;
 #include "libtorrent/aux_/bind_to_device.hpp"
 #include "libtorrent/hex.hpp" // to_hex, from_hex
 #include "libtorrent/aux_/scope_end.hpp"
-
+#ifndef TORRENT_DISABLE_NSW
+#include "libtorrent/navigable_small_world/nsw_tracker.hpp"
+#endif
 #ifndef TORRENT_DISABLE_LOGGING
 
 #include "libtorrent/socket_io.hpp"
@@ -6663,6 +6665,9 @@ namespace aux {
 		// TODO: 3 allow the caller to select which listen socket to update
 		for (auto& i : m_listen_sockets)
 		{
+			if (source_type == source_nsw)
+				break;
+
 			if (i.local_endpoint.address().is_v4() != ip.is_v4())
 				continue;
 
@@ -6684,10 +6689,21 @@ namespace aux {
 
 		// since we have a new external IP now, we need to
 		// restart the DHT with a new node ID
-
-#ifndef TORRENT_DISABLE_DHT
-		if (m_dht) m_dht->update_node_id();
+		if (source_type == source_nsw)
+		{
+#ifndef TORRENT_DISABLE_NSW
+			if (m_nsw) m_nsw->update_node_id();
 #endif
+		}
+		else
+		{
+#ifndef TORRENT_DISABLE_DHT
+
+			if (m_dht) m_dht->update_node_id();
+#endif
+		}
+
+
 	}
 
 	ses_buffer_holder session_impl::allocate_buffer()
@@ -6932,5 +6948,72 @@ namespace aux {
 			m_ses.alerts().emplace_alert<log_alert>(fmt, v);
 			va_end(v);
 		}
+
+		bool session_impl::nsw_should_log(nsw_log_level_t) const
+		{
+			return m_alerts.should_post<nsw_log_alert>();
+		}
+
+		TORRENT_FORMAT(3,4)
+		void session_impl::nsw_log(nsw_log_level_t m, char const* fmt, ...)
+		{
+			if (!m_alerts.should_post<nsw_log_alert>()) return;
+
+			va_list v;
+			va_start(v, fmt);
+			m_alerts.emplace_alert<nsw_log_alert>(
+				static_cast<nsw_log_alert::nsw_log_level_t>(m), fmt, v);
+			va_end(v);
+		}
+
+		void session_impl::nsw_log_packet(nsw_log_message_direction_t dir, span<char const> pkt
+			, udp::endpoint const& node)
+		{
+			if (!m_alerts.should_post<nsw_pkt_alert>()) return;
+
+			nsw_pkt_alert::nsw_log_message_direction_t d = dir == nsw::nsw_logger_interface::incoming_message
+				? nsw_pkt_alert::incoming : nsw_pkt_alert::outgoing;
+
+			m_alerts.emplace_alert<nsw_pkt_alert>(pkt, d, node);
+		}
 #endif // TORRENT_DISABLE_LOGGING
+
+		void session_impl::get_friends(sha1_hash const& ih, std::string const& text)
+		{
+			if (!m_alerts.should_post<nsw_get_friends_alert>()) return;
+			m_alerts.emplace_alert<nsw_get_friends_alert>(ih, text);
+		}
+
+		void session_impl::outgoing_get_friends(sha1_hash const& nid
+			, std::string const& target_text, udp::endpoint const& ep)
+		{
+			if (!m_alerts.should_post<nsw_outgoing_get_friends_alert>()) return;
+			m_alerts.emplace_alert<nsw_outgoing_get_friends_alert>(nid, target_text, ep);
+		}
+
+
+	// this is the NSW observer version. NSW is the implied source
+	void session_impl::set_nsw_external_address(address const& ip
+		, address const& source)
+	{
+		set_external_address(ip, source_nsw, source);
+	}
+
+	// TODO 3 pass in a specific listen socket rather than an address family
+	address session_impl::external_nsw_address(udp proto)
+	{
+#if !TORRENT_USE_IPV6
+		TORRENT_UNUSED(proto);
+#endif
+
+		address addr;
+#if TORRENT_USE_IPV6
+		if (proto == udp::v6())
+			addr = address_v6();
+		else
+#endif
+		addr = address_v4();
+		addr = external_address().external_address(addr);
+		return addr;
+	}
 }}

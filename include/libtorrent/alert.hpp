@@ -181,6 +181,13 @@ namespace libtorrent {
 			// enables verbose logging from the piece picker.
 			picker_log_notification       = 0x100000,
 
+			// Alerts on events in the NSW node. For incoming searches or
+			// bootstrapping being done etc.
+			nsw_notification              = 0x200000,
+			// enables nsw_log_alert, debug logging for the NSW
+			nsw_log_notification          = 0x400000,
+			nsw_operation_notification    = 0x800000,
+
 			// The full bitmask, representing all available categories.
 			//
 			// since the enum is signed, make sure this isn't

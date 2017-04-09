@@ -46,7 +46,9 @@ namespace nsw
 
 	void node_entry::update_rtt(int new_rtt)
 	{
-		(void)new_rtt;
+		if (new_rtt == ~0) return;
+		if (rtt == ~0) rtt = std::uint16_t(new_rtt);
+		else rtt = std::uint16_t(int(rtt) * 2 / 3 + new_rtt / 3);
 	}
 
 }}

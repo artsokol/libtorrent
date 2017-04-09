@@ -257,12 +257,13 @@ namespace libtorrent
 struct TORRENT_EXPORT nsw_settings
 	{
 		nsw_settings()
-			: 
+			:
 #ifndef TORRENT_NO_DEPRECATE
 			service_port(0)
 #endif
 			, max_fail_count(20)
 			, item_lifetime(0)
+			, search_threads(2)
 		{}
 
 
@@ -271,6 +272,9 @@ struct TORRENT_EXPORT nsw_settings
 #endif
 		int max_fail_count;
 		int item_lifetime;
+
+		// the number of concurrent search request
+	 	int search_threads;
 	};
 }
 

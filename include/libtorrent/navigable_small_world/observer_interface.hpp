@@ -1,5 +1,5 @@
-#ifndef MAIN_OBSERVER_INTERFACE_HPP
-#define MAIN_OBSERVER_INTERFACE_HPP
+#ifndef OBSERVER_INTERFACE_HPP
+#define OBSERVER_INTERFACE_HPP
 
 #include <cstdint>
 #include <memory>
@@ -16,9 +16,10 @@ struct traversal_algorithm;
 
 // definition of observer interface (pattern)
 // which is used for NSW protocol commands wrapping
-class TORRENT_EXTRA_EXPORT observer_interface : boost::noncopyable
-	, std::enable_shared_from_this<observer_interface>
+class TORRENT_EXTRA_EXPORT observer_interface : public boost::noncopyable
+	, public std::enable_shared_from_this<observer_interface>
 {
+private:
 	std::shared_ptr<observer_interface> self() { return shared_from_this(); }
 
 	time_point m_sent;
@@ -26,7 +27,7 @@ class TORRENT_EXTRA_EXPORT observer_interface : boost::noncopyable
 	const std::shared_ptr<traversal_algorithm> m_algorithm;
 
 	node_id m_id;
-
+	std::string m_description;
 	union addr_t
 	{
 #if TORRENT_USE_IPV6
@@ -44,21 +45,22 @@ protected:
 
 public:
 	observer_interface(std::shared_ptr<traversal_algorithm> const& a
-		, udp::endpoint const& ep, node_id const& id)
+		, udp::endpoint const& ep, node_id const& id, std::string const& text)
 		: m_sent()
 		, m_algorithm(a)
 		, m_id(id)
+		, m_description(text)
 		, m_port(0)
 		, m_transaction_id()
 		, flags(0)
 	{
-		TORRENT_ASSERT(a);
-#if TORRENT_USE_ASSERTS
-		m_in_constructor = true;
-		m_was_sent = false;
-		m_was_abandoned = false;
-		m_in_use = true;
-#endif
+//		TORRENT_ASSERT(a);
+// #if TORRENT_USE_ASSERTS
+// 		m_in_constructor = true;
+// 		m_was_sent = false;
+// 		m_was_abandoned = false;
+// 		m_in_use = true;
+// #endif
 		set_target(ep);
 	}
 
@@ -93,6 +95,9 @@ public:
 	void set_id(node_id const& id);
 	node_id const& id() const { return m_id; }
 
+	void set_descr(std::string const& text);
+	std::string const& descr() const { return m_description; }
+
 	void set_transaction_id(std::uint16_t tid)
 	{ m_transaction_id = tid; }
 
@@ -113,16 +118,16 @@ public:
 
 	std::uint8_t flags;
 
-#if TORRENT_USE_ASSERTS
-	bool m_in_constructor:1;
-	bool m_was_sent:1;
-	bool m_was_abandoned:1;
-	bool m_in_use:1;
-#endif
+// #if TORRENT_USE_ASSERTS
+// 	bool m_in_constructor:1;
+// 	bool m_was_sent:1;
+// 	bool m_was_abandoned:1;
+// 	bool m_in_use:1;
+// #endif
 };
 
 typedef std::shared_ptr<observer_interface> observer_ptr;
 
 } }
 
-#endif // MAIN_OBSERVER_INTERFACE_HPP
+#endif // OBSERVER_INTERFACE_HPP

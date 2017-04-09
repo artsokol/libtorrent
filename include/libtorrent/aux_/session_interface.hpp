@@ -135,7 +135,8 @@ namespace libtorrent { namespace aux
 			source_dht = 1,
 			source_peer = 2,
 			source_tracker = 4,
-			source_router = 8
+			source_router = 8,
+			source_nsw = 16
 		};
 
 		virtual void set_external_address(address const& ip

@@ -228,4 +228,7 @@ nobase_include_HEADERS = \
   navigable_small_world/rpc_manager.hpp                    \
   navigable_small_world/traversal_algorithm.hpp            \
   navigable_small_world/types.hpp                          \
+  navigable_small_world/find_data.hpp                      \
+  navigable_small_world/get_friends.hpp                    \
+  navigable_small_world/bootstrap.hpp                      \
   navigable_small_world/term_vector.hpp

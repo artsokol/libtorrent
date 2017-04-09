@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <unordered_map>
 
 #include <boost/unordered_map.hpp>
 
@@ -40,7 +41,7 @@ public:
                         m_tf(),
                         m_observer(observer)
     {
-        int ret = parseFile(textFile);
+//        int ret = parseFile(textFile);
 #ifndef TORRENT_DISABLE_LOGGING
         // if(ret != 0)
         //     if (m_observer) m_observer->nsw_log(nsw_logger::node,
@@ -55,19 +56,19 @@ public:
                         m_observer(observer)
     {
 
-        unsigned int wordCount = string2vec(string_to_parse);
+//         unsigned int wordCount = string2vec(string_to_parse);
 
-#ifndef TORRENT_DISABLE_LOGGING
-        // if(wordCount == 0)
-        //     if (m_observer) m_observer->nsw_log(nsw_logger::node,
-        //         "Term vector Error: object created but not ititialized correctly as string is empty%s",
-        //                                                                 string_to_parse.c_str());
-#endif
-        for (boost::unordered::unordered_map<std::wstring, double>::iterator it = m_tf.begin(); wordCount != 0, it != m_tf.end(); ++it)
-        {
-            it->second /= wordCount;
-        // cout << " key: " << std::get<0>(hashPair) << " |value: " << std::get<1>(hashPair) << endl;
-        }
+// #ifndef TORRENT_DISABLE_LOGGING
+//         // if(wordCount == 0)
+//         //     if (m_observer) m_observer->nsw_log(nsw_logger::node,
+//         //         "Term vector Error: object created but not ititialized correctly as string is empty%s",
+//         //                                                                 string_to_parse.c_str());
+// #endif
+//         for (boost::unordered::unordered_map<std::wstring, double>::iterator it = m_tf.begin(); wordCount != 0, it != m_tf.end(); ++it)
+//         {
+//             it->second /= wordCount;
+//         // cout << " key: " << std::get<0>(hashPair) << " |value: " << std::get<1>(hashPair) << endl;
+//         }
 
     }
 
@@ -93,25 +94,31 @@ public:
 
     ~term_vector(){};
 
-    int parseFile(const char* file);
-    unsigned int string2vec(const std::string& line);
+    // int parseFile(const char* file);
+    // unsigned int string2vec(const std::string& line);
 
-    double getSimilarityWith(const std::wstring& textString);
-    double getSimilarityWith(const term_vector& vecObject);
+    // double getSimilarityWith(const std::wstring& textString);
+    // double getSimilarityWith(const term_vector& vecObject);
 
-    //nuber of uniq words in our vector
-    unsigned long cardinality() const;
+    // //nuber of uniq words in our vector
+    // unsigned long cardinality() const;
 
     nsw_logger_observer_interface* observer() const { return m_observer; }
 
     static double getSimilarity(const std::wstring& textString1, const std::wstring& textString2);
     static double getSimilarity(const std::string& textString1, const std::string& textString2);
+
+    static std::unordered_map<std::wstring, double>& makeTermVector(const std::wstring& textString, std::unordered_map<std::wstring, double>& termVector);
+    static std::unordered_map<std::string, double>& makeTermVector(const std::string& textString, std::unordered_map<std::string, double>& termVector);
+
+    static std::wstring vectorToString(const std::unordered_map<std::wstring, double>& termVector);
+    static std::string vectorToString(const std::unordered_map<std::string, double>& termVector);
 private:
-    double cosineSimilarity(const boost::unordered::unordered_map<std::wstring, double>&,const boost::unordered::unordered_map<std::wstring, double>& );
-    //
-    void fillTextVectorDiff(boost::unordered::unordered_map<std::wstring, double>&,boost::unordered::unordered_map<std::wstring, double>& );
-    //copy absent words from source vector to destination with missing value frequency
-    void findMissingWordAndFill(const boost::unordered::unordered_map<std::wstring, double>& sourceTextVector, boost::unordered::unordered_map<std::wstring, double>& destinationTextVector);
+    // double cosineSimilarity(const boost::unordered::unordered_map<std::wstring, double>&,const boost::unordered::unordered_map<std::wstring, double>& );
+    // //
+    // void fillTextVectorDiff(boost::unordered::unordered_map<std::wstring, double>&,boost::unordered::unordered_map<std::wstring, double>& );
+    // //copy absent words from source vector to destination with missing value frequency
+    // void findMissingWordAndFill(const boost::unordered::unordered_map<std::wstring, double>& sourceTextVector, boost::unordered::unordered_map<std::wstring, double>& destinationTextVector);
 
     //for debug purpoces
     void printTextVector(const boost::unordered::unordered_map<std::wstring, double>& textVector)
@@ -134,17 +141,17 @@ private:
 
 };
 
-inline unsigned long term_vector::cardinality() const
-{
-    return m_tf.size();
-}
+// inline unsigned long term_vector::cardinality() const
+// {
+//     return m_tf.size();
+// }
 
-inline void term_vector::fillTextVectorDiff(boost::unordered::unordered_map<std::wstring, double>& vec1,boost::unordered::unordered_map<std::wstring, double>& vec2)
-{
-    findMissingWordAndFill(vec1,vec2);
+// inline void term_vector::fillTextVectorDiff(boost::unordered::unordered_map<std::wstring, double>& vec1,boost::unordered::unordered_map<std::wstring, double>& vec2)
+// {
+//     findMissingWordAndFill(vec1,vec2);
 
-    findMissingWordAndFill(vec2,vec1);
-}
+//     findMissingWordAndFill(vec2,vec1);
+// }
 
 } }
 

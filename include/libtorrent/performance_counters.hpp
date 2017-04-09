@@ -426,6 +426,13 @@ namespace libtorrent
 			num_utp_deleted,
 
 			nsw_nodes,
+                        nsw_ping_in,
+                        nsw_ping_out,
+                        nsw_find_node_in,
+                        nsw_find_node_out,
+                        nsw_get_friends_in,
+                        nsw_get_friends_out,
+
 			num_counters,
 			num_gauges_counters = num_counters - num_stats_counters
 		};

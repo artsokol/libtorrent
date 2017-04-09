@@ -24,10 +24,10 @@ using namespace std::placeholders;
 namespace libtorrent { namespace nsw {
 
 using observer_storage = std::aligned_union<1
-//	, find_data_observer
+	, find_data_observer
 //	, get_item_observer
 //	, get_peers_observer
-//  , traversal_observer
+  , traversal_observer
 	,null_observer>::type;
 
 rpc_manager::rpc_manager(node_id const& our_id
@@ -52,7 +52,7 @@ rpc_manager::rpc_manager(node_id const& our_id
 
 rpc_manager::~rpc_manager()
 {
-	TORRENT_ASSERT(!m_destructing);
+//	TORRENT_ASSERT(!m_destructing);
 	m_destructing = true;
 
 	for (auto const& t : m_transactions)
@@ -61,7 +61,7 @@ rpc_manager::~rpc_manager()
 	}
 }
 
-inline void* rpc_manager::allocate_observer()
+void* rpc_manager::allocate_observer()
 {
 	m_pool_allocator.set_next_size(10);
 	void* ret = m_pool_allocator.malloc();
@@ -69,11 +69,11 @@ inline void* rpc_manager::allocate_observer()
 	return ret;
 }
 
-inline void rpc_manager::free_observer(void* ptr)
+void rpc_manager::free_observer(void* ptr)
 {
 	if (ptr == nullptr) return;
 	--m_allocated_observers;
-	TORRENT_ASSERT(reinterpret_cast<observer_interface*>(ptr)->m_in_use == false);
+//	TORRENT_ASSERT(reinterpret_cast<observer_interface*>(ptr)->m_in_use == false);
 	m_pool_allocator.free(ptr);
 }
 
@@ -83,20 +83,20 @@ void rpc_manager::unreachable(udp::endpoint const& ep)
 #ifndef TORRENT_DISABLE_LOGGING
 	if (m_log->should_log(nsw_logger_interface::rpc_manager))
 	{
-		m_log->log(nsw_logger_interface::rpc_manager, "MACHINE_UNREACHABLE [ ip: %s ]"
+		m_log->nsw_log(nsw_logger_interface::rpc_manager, "MACHINE_UNREACHABLE [ ip: %s ]"
 			, print_endpoint(ep).c_str());
 	}
 #endif
 
 	for (auto i = m_transactions.begin(); i != m_transactions.end();)
 	{
-		TORRENT_ASSERT(i->second);
+//		TORRENT_ASSERT(i->second);
 		observer_ptr const& o = i->second;
 		if (o->target_ep() != ep) { ++i; continue; }
 		observer_ptr ptr = i->second;
 		i = m_transactions.erase(i);
 #ifndef TORRENT_DISABLE_LOGGING
-		m_log->log(nsw_logger_interface::rpc_manager, "found transaction [ tid: %d ]"
+		m_log->nsw_log(nsw_logger_interface::rpc_manager, "found transaction [ tid: %d ]"
 			, int(ptr->transaction_id()));
 #endif
 		ptr->timeout();
@@ -109,8 +109,8 @@ bool rpc_manager::incoming(msg const& m, node_id* id)
 	if (m_destructing) return false;
 
 	// we only deal with replies and errors, not queries
-	TORRENT_ASSERT(m.message.dict_find_string_value("y") == "r"
-		|| m.message.dict_find_string_value("y") == "e");
+	// TORRENT_ASSERT(m.message.dict_find_string_value("y") == "r"
+	// 	|| m.message.dict_find_string_value("y") == "e");
 
 	// if we don't have the transaction id in our
 	// request list, ignore the packet
@@ -136,7 +136,7 @@ bool rpc_manager::incoming(msg const& m, node_id* id)
 #ifndef TORRENT_DISABLE_LOGGING
 		if (m_table.is_native_endpoint(m.addr) && m_log->should_log(nsw_logger_interface::rpc_manager))
 		{
-			m_log->log(nsw_logger_interface::rpc_manager, "reply with unknown transaction id size: %d from %s"
+			m_log->nsw_log(nsw_logger_interface::rpc_manager, "reply with unknown transaction id size: %d from %s"
 				, int(transaction_id.size()), print_endpoint(m.addr).c_str());
 		}
 #endif
@@ -153,7 +153,7 @@ bool rpc_manager::incoming(msg const& m, node_id* id)
 #ifndef TORRENT_DISABLE_LOGGING
 	if (m_log->should_log(nsw_logger_interface::rpc_manager))
 	{
-		m_log->log(nsw_logger_interface::rpc_manager, "round trip time(ms): %" PRId64 " from %s"
+		m_log->nsw_log(nsw_logger_interface::rpc_manager, "round trip time(ms): %" PRId64 " from %s"
 			, total_milliseconds(now - o->sent()), print_endpoint(m.addr).c_str());
 	}
 #endif
@@ -169,14 +169,14 @@ bool rpc_manager::incoming(msg const& m, node_id* id)
 				&& err.list_at(0).type() == bdecode_node::int_t
 				&& err.list_at(1).type() == bdecode_node::string_t)
 			{
-				m_log->log(nsw_logger_interface::rpc_manager, "reply with error from %s: (%" PRId64 ") %s"
+				m_log->nsw_log(nsw_logger_interface::rpc_manager, "reply with error from %s: (%" PRId64 ") %s"
 					, print_endpoint(m.addr).c_str()
 					, err.list_int_value_at(0)
 					, err.list_string_value_at(1).to_string().c_str());
 			}
 			else
 			{
-				m_log->log(nsw_logger_interface::rpc_manager, "reply with (malformed) error from %s"
+				m_log->nsw_log(nsw_logger_interface::rpc_manager, "reply with (malformed) error from %s"
 					, print_endpoint(m.addr).c_str());
 			}
 		}
@@ -220,7 +220,7 @@ bool rpc_manager::incoming(msg const& m, node_id* id)
 #ifndef TORRENT_DISABLE_LOGGING
 	if (m_log->should_log(nsw_logger_interface::rpc_manager))
 	{
-		m_log->log(nsw_logger_interface::rpc_manager, "[%p] reply with transaction id: %d from %s"
+		m_log->nsw_log(nsw_logger_interface::rpc_manager, "[%p] reply with transaction id: %d from %s"
 			, static_cast<void*>(o->algorithm()), int(transaction_id.size())
 			, print_endpoint(m.addr).c_str());
 	}
@@ -260,7 +260,7 @@ time_duration rpc_manager::tick()
 #ifndef TORRENT_DISABLE_LOGGING
 			if (m_log->should_log(nsw_logger_interface::rpc_manager))
 			{
-				m_log->log(nsw_logger_interface::rpc_manager, "[%p] timing out transaction id: %d from: %s"
+				m_log->nsw_log(nsw_logger_interface::rpc_manager, "[%p] timing out transaction id: %d from: %s"
 					, static_cast<void*>(o->algorithm()), o->transaction_id()
 					, print_endpoint(o->target_ep()).c_str());
 			}
@@ -277,7 +277,7 @@ time_duration rpc_manager::tick()
 #ifndef TORRENT_DISABLE_LOGGING
 			if (m_log->should_log(nsw_logger_interface::rpc_manager))
 			{
-				m_log->log(nsw_logger_interface::rpc_manager, "[%p] short-timing out transaction id: %d from: %s"
+				m_log->nsw_log(nsw_logger_interface::rpc_manager, "[%p] short-timing out transaction id: %d from: %s"
 					, static_cast<void*>(o->algorithm()), o->transaction_id()
 					, print_endpoint(o->target_ep()).c_str());
 			}
@@ -324,7 +324,7 @@ bool rpc_manager::invoke(entry& e, udp::endpoint target_addr
 	node& n = o->algorithm()->get_node();
 	if (!n.native_address(o->target_addr()))
 	{
-		a["want"].list().push_back(entry(n.protocol_family_name()));
+		a["want"].list().push_back(entry(n.get_protocol_family_name()));
 	}
 
 	o->set_target(target_addr);
@@ -333,7 +333,7 @@ bool rpc_manager::invoke(entry& e, udp::endpoint target_addr
 #ifndef TORRENT_DISABLE_LOGGING
 	if (m_log != nullptr && m_log->should_log(nsw_logger_interface::rpc_manager))
 	{
-		m_log->log(nsw_logger_interface::rpc_manager, "[%p] invoking %s -> %s"
+		m_log->nsw_log(nsw_logger_interface::rpc_manager, "[%p] invoking %s -> %s"
 			, static_cast<void*>(o->algorithm()), e["q"].string().c_str()
 			, print_endpoint(target_addr).c_str());
 	}
@@ -342,20 +342,20 @@ bool rpc_manager::invoke(entry& e, udp::endpoint target_addr
 	if (m_sock->send_packet(e, target_addr))
 	{
 		m_transactions.insert(std::make_pair(tid, o));
-#if TORRENT_USE_ASSERTS
-		o->m_was_sent = true;
-#endif
+// #if TORRENT_USE_ASSERTS
+// 		o->m_was_sent = true;
+// #endif
 		return true;
 	}
 	return false;
 }
 
-#if TORRENT_USE_ASSERTS
-size_t rpc_manager::allocation_size() const
-{
-	return sizeof(observer_storage);
-}
-#endif
+// #if TORRENT_USE_ASSERTS
+// size_t rpc_manager::allocation_size() const
+// {
+// 	return sizeof(observer_storage);
+// }
+// #endif
 
 } }
 

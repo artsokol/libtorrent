@@ -2506,6 +2506,147 @@ namespace libtorrent
 		aux::allocation_slot const m_msg_idx;
 	};
 
+	// This alert is posted when the initial NSW bootstrap is done.
+	struct TORRENT_EXPORT nsw_bootstrap_done_alert final : alert
+	{
+		// internal
+		explicit nsw_bootstrap_done_alert(aux::stack_allocator& alloc);
+
+		TORRENT_DEFINE_ALERT(nsw_bootstrap_done_alert, 91)
+
+		static const int static_category = alert::nsw_notification;
+		virtual std::string message() const override;
+	};
+
+	// This alert is generated when a DHT node sends a ``get_friends`` message to
+	// our nsw node. It belongs to the ``nsw_notification`` category.
+	struct TORRENT_EXPORT nsw_get_friends_alert final : alert
+	{
+		// internal
+		nsw_get_friends_alert(aux::stack_allocator& alloc
+							, sha1_hash const& ih
+							, std::string const& text);
+
+		TORRENT_DEFINE_ALERT(nsw_get_friends_alert, 92)
+
+		static const int static_category = alert::nsw_notification;
+		virtual std::string message() const override;
+
+		sha1_hash const info_hash;
+		std::string const target_text;
+	};
+
+	// This alert is generated when we send a get_friends request
+	// It belongs to the ``nsw_notification`` category.
+	struct TORRENT_EXPORT nsw_outgoing_get_friends_alert final : alert
+	{
+		// internal
+		nsw_outgoing_get_friends_alert(aux::stack_allocator& alloc
+			, sha1_hash const& ih, std::string const& text
+			, udp::endpoint ep);
+
+		TORRENT_DEFINE_ALERT(nsw_outgoing_get_friends_alert, 93)
+
+		static const int static_category = alert::nsw_notification;
+		virtual std::string message() const override;
+
+		sha1_hash const info_hash;
+		// the info_hash of the torrent we're looking for peers for.
+		std::string const target_text;
+
+		// the endpoint we're sending this query to
+		udp::endpoint const endpoint;
+
+	};
+
+	struct TORRENT_EXPORT nsw_log_alert final : alert
+	{
+		enum nsw_log_level_t
+		{
+			tracker,
+			node,
+			routing_table,
+			rpc_manager,
+			traversal
+		};
+
+		nsw_log_alert(aux::stack_allocator& alloc
+			, nsw_log_level_t m, char const* fmt, va_list v);
+
+		static const int static_category = alert::nsw_log_notification;
+		TORRENT_DEFINE_ALERT(nsw_log_alert, 94)
+
+		virtual std::string message() const override;
+
+		// the log message
+		char const* log_message() const;
+
+		nsw_log_level_t const level;
+
+	private:
+		std::reference_wrapper<aux::stack_allocator const> m_alloc;
+		aux::allocation_slot const m_msg_idx;
+	};
+
+	// This alert is posted every time a NSW message is sent or received. It is
+	// only posted if the ``alert::nsw_log_notification`` alert category is
+	// enabled. It contains a verbatim copy of the message.
+	struct TORRENT_EXPORT nsw_pkt_alert final : alert
+	{
+		enum nsw_log_message_direction_t
+		{ incoming, outgoing };
+
+		nsw_pkt_alert(aux::stack_allocator& alloc, span<char const> buf
+			, nsw_pkt_alert::nsw_log_message_direction_t d
+			, udp::endpoint const& ep);
+
+		static const int static_category = alert::nsw_log_notification;
+		TORRENT_DEFINE_ALERT(nsw_pkt_alert, 95)
+
+		virtual std::string message() const override;
+
+		// returns a pointer to the packet buffer and size of the packet,
+		// respectively. This buffer is only valid for as long as the alert itself
+		// is valid, which is owned by libtorrent and reclaimed whenever
+		// pop_alerts() is called on the session.
+		span<char const> pkt_buf() const;
+
+		// whether this is an incoming or outgoing packet.
+		nsw_log_message_direction_t const direction;
+
+		// the NSW node we received this packet from, or sent this packet to
+		// (depending on ``direction``).
+		udp::endpoint const node;
+
+	private:
+		std::reference_wrapper<aux::stack_allocator> m_alloc;
+		aux::allocation_slot const m_msg_idx;
+		int const m_size;
+	};
+
+	struct TORRENT_EXPORT nsw_get_friends_reply_alert final : alert {
+
+		nsw_get_friends_reply_alert(aux::stack_allocator& alloc
+			, sha1_hash const& ih
+			, std::vector<tcp::endpoint> const& v);
+
+		static const int static_category = alert::nsw_operation_notification;
+		TORRENT_DEFINE_ALERT(nsw_get_friends_reply_alert, 96)
+
+		virtual std::string message() const override;
+
+		sha1_hash const info_hash;
+
+		int num_friends() const;
+
+		std::vector<tcp::endpoint> friends() const;
+
+	private:
+		std::reference_wrapper<aux::stack_allocator> m_alloc;
+		int const m_num_friends;
+		aux::allocation_slot m_friends_idx;
+	};
+
 	struct TORRENT_EXPORT nsw_lookup
 	{
 		// string literal indicating which kind of lookup this is
@@ -2516,8 +2657,11 @@ namespace libtorrent
 		// the total number of responses we have received for this
 		// lookup so far for this lookup
 		int responses;
-		// the node-id or info-hash target for this lookup
-		sha1_hash target;
+		int in_progress_requests;
+		// the text target for this lookup
+		std::string target;
+		// the number of concurrent request
+		int threads;
 	};
 
 	// struct to hold information about a single NSW routing table

@@ -69,7 +69,7 @@ node_id generate_id_impl(address const& ip_, std::uint32_t r)
 	return id;
 }
 
-inline node_id generate_id(address const& ip)
+node_id generate_id(address const& ip)
 {
 	return generate_id_impl(ip, random(0xffffffff));
 }

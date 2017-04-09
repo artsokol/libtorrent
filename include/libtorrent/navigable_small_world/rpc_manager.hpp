@@ -14,7 +14,6 @@
 #include "libtorrent/navigable_small_world/node_id.hpp"
 #include "libtorrent/navigable_small_world/observer_interface.hpp"
 
-
 namespace libtorrent
 {
 	struct nsw_settings;
@@ -27,11 +26,13 @@ namespace libtorrent { namespace nsw
 struct nsw_logger_interface;
 struct udp_socket_interface;
 
-class TORRENT_EXTRA_EXPORT null_observer : public observer_interface
+struct TORRENT_EXTRA_EXPORT null_observer : public observer_interface
 {
 public:
 	null_observer(std::shared_ptr<traversal_algorithm> const& a
-		, udp::endpoint const& ep, node_id const& id): observer_interface(a, ep, id) {}
+		, udp::endpoint const& ep
+		, node_id const& id
+		, std::string const& text): observer_interface(a, ep, id, text) {}
 	virtual void reply(msg const&) { flags |= flag_done; }
 };
 
@@ -73,10 +74,10 @@ public:
 	}
 
 	int num_allocated_observers() const { return m_allocated_observers; }
-
-#if TORRENT_USE_ASSERTS
-	size_t allocation_size() const;
-#endif
+	void update_node_id(node_id const& id) { m_our_id = id; }
+// #if TORRENT_USE_ASSERTS
+// 	size_t allocation_size() const;
+// #endif
 
 private:
 

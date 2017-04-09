@@ -119,7 +119,7 @@ private:
 	// been identified as router nodes. They will
 	// be used in searches as gates, but they should not
 	// be added to the routing table.
-	std::set<udp::endpoint> m_router_nodes;
+	std::map<udp::endpoint, std::string> m_gate_nodes;
 
 	// stores short links
 	routing_table_t m_close_nodes_rt;
@@ -161,12 +161,12 @@ public:
 
 	void node_failed(node_id const& nid, udp::endpoint const& ep);
 
-	void add_router_node(udp::endpoint const& router);
+	void add_gate_node(udp::endpoint const& router,std::string const& description);
 
 	// iterates over the router nodes added
-	typedef std::set<udp::endpoint>::const_iterator router_iterator;
-	router_iterator begin() const { return m_router_nodes.begin(); }
-	router_iterator end() const { return m_router_nodes.end(); }
+	typedef std::map<udp::endpoint,std::string>::const_iterator router_iterator;
+	router_iterator begin() const { return m_gate_nodes.begin(); }
+	router_iterator end() const { return m_gate_nodes.end(); }
 
 
 	add_node_status_t add_node_impl(node_entry e);
@@ -213,11 +213,18 @@ public:
 	node_id const& id() const
 	{ return m_id; }
 
+	std::string const& get_descr() const
+	{ return m_description; }
+
 	routing_table_t const& neighbourhood() const
 	{ return m_close_nodes_rt; }
 
 	int neighbourhood_size() const { return m_neighbourhood_size; }
 
+	// fills the vector with the k nodes from our storage that
+	// are nearest to the given text.
+	void find_node(std::string const& target_string
+					, std::vector<node_entry>& l, int count=0);
 //	std::int64_t num_global_nodes() const;
 
 //	int num_active_buckets() const { return int(m_buckets.size()); }
@@ -252,6 +259,8 @@ private:
 	node_entry* find_node(udp::endpoint const& ep
 							, routing_table::table_type_t& type
 							, int& index);
+
+
 	bool fill_from_replacements(node_entry& ne);
 
 	routing_table::add_node_status_t insert_node(const node_entry& e);

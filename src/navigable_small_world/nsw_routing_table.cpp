@@ -146,6 +146,28 @@ node_entry* routing_table::find_node(udp::endpoint const& ep
 	return nullptr;
 }
 
+	// fills the vector with the k nodes from our storage that
+	// are nearest to the given text.
+void routing_table::find_node(std::string const& target_string
+								, std::vector<node_entry>& l
+								, int count)
+{
+	if (count < 1)
+		return;
+
+	l.insert(l.end(),m_close_nodes_rt.begin(),m_close_nodes_rt.end());
+	l.insert(l.end(),m_far_nodes_rt.begin(),m_far_nodes_rt.end());
+
+	sort(l.begin(), l.end(),
+			[&target_string](node_entry const& a,node_entry const& b) -> bool
+					{
+						return term_vector::getSimilarity(a.term_vector,target_string) >
+									term_vector::getSimilarity(b.term_vector,target_string);
+					});
+
+	l.resize(count);
+}
+
 void routing_table::remove_node(node_entry* n, routing_table_t& rt)
 {
 	if (!rt.empty()
@@ -526,9 +548,9 @@ void routing_table::node_failed(node_id const& nid, udp::endpoint const& ep)
 
 }
 
-void routing_table::add_router_node(udp::endpoint const& router)
+void routing_table::add_gate_node(udp::endpoint const& router, std::string const& description)
 {
-	m_router_nodes.insert(router);
+	m_gate_nodes.insert(std::make_pair(router,description));
 }
 
 bool routing_table::node_seen(node_id const& id, udp::endpoint const& ep, int rtt)
@@ -552,7 +574,7 @@ void routing_table::log_node_failed(node_id const& nid, node_entry const& ne) co
 {
 	if (m_log != nullptr && m_log->should_log(nsw_logger_interface::routing_table))
 	{
-		m_log->log(nsw_logger_interface::routing_table, "NODE FAILED id: %s \
+		m_log->nsw_log(nsw_logger_interface::routing_table, "NODE FAILED id: %s \
 														fails: %d \
 														pinged: %d \
 														up-time: %d"
@@ -567,7 +589,7 @@ void routing_table::log_node_added(node_entry const& ne) const
 {
 	if (m_log != nullptr && m_log->should_log(nsw_logger_interface::routing_table))
 	{
-		m_log->log(nsw_logger_interface::routing_table, "NODE ADDED id: %s \
+		m_log->nsw_log(nsw_logger_interface::routing_table, "NODE ADDED id: %s \
 														up-time: %d\n \
 														description %s"
 			, aux::to_hex(ne.id).c_str()
