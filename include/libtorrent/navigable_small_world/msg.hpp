@@ -18,8 +18,18 @@ struct msg
 	bdecode_node const& message;
 
 	udp::endpoint addr;
+
+
+    //msg_tools
+
+    //we concider numberis positive
+    static int count_digits(int arg) {
+        return std::snprintf(NULL, 0, "%d", arg);
+    }
 private:
 	msg& operator=(msg const&);
+
+
 };
 
 struct key_desc_t
