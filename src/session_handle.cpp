@@ -626,6 +626,44 @@ namespace libtorrent
 	}
 #endif // TORRENT_NO_DEPRECATE
 
+	void session_handle::set_nsw_settings(nsw_settings const& settings)
+	{
+#ifndef TORRENT_DISABLE_NSW
+		async_call(&session_impl::set_nsw_settings, settings);
+#else
+		TORRENT_UNUSED(settings);
+#endif
+	}
+
+	nsw_settings session_handle::get_nsw_settings() const
+	{
+#ifndef TORRENT_DISABLE_NSW
+		return sync_call_ret<nsw_settings>(&session_impl::get_nsw_settings);
+#else
+		return nsw_settings();
+#endif
+	}
+
+	bool session_handle::is_nsw_running() const
+	{
+#ifndef TORRENT_DISABLE_NSW
+		return sync_call_ret<bool>(&session_impl::is_nsw_running);
+#else
+		return false;
+#endif
+	}
+
+
+	void session_handle::add_nsw_node(sha1_hash const& nid, std::string const&  descr)
+	{
+#ifndef TORRENT_DISABLE_NSW
+		async_call(&session_impl::add_nsw_node, nid, descr);
+#else
+		TORRENT_UNUSED(node);
+#endif
+	}
+
+
 	void session_handle::add_extension(std::function<std::shared_ptr<torrent_plugin>(torrent_handle const&, void*)> ext)
 	{
 #ifndef TORRENT_DISABLE_EXTENSIONS

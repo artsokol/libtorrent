@@ -103,8 +103,8 @@ namespace libtorrent
 			save_dht_state =    0x004,
 
 			// save pe_settings
-			save_encryption_settings = 0x020
-
+			save_encryption_settings = 0x020,
+			save_nsw_state =    0x080
 #ifndef TORRENT_NO_DEPRECATE
 			,
 			save_as_map =       0x040,
@@ -454,7 +454,11 @@ namespace libtorrent
 		TORRENT_DEPRECATED
 		void start_dht(entry const& startup_state);
 #endif
-
+		void set_nsw_settings(nsw_settings const& settings);
+		bool is_nsw_running() const;
+		nsw_settings get_nsw_settings() const;
+		void add_nsw_node(sha1_hash const& info_hash, std::string const&  descr);
+		void nsw_get_peers(sha1_hash const& info_hash);
 		// This function adds an extension to this session. The argument is a
 		// function object that is called with a ``torrent_handle`` and which should
 		// return a ``std::shared_ptr<torrent_plugin>``. To write custom

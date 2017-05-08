@@ -116,7 +116,8 @@ namespace libtorrent
 		SET(proxy_password, "", &session_impl::update_proxy),
 		SET(i2p_hostname, "", &session_impl::update_i2p_bridge),
 		SET(peer_fingerprint, "-LT1200-", &session_impl::update_peer_fingerprint),
-		SET(dht_bootstrap_nodes, "dht.libtorrent.org:25401", &session_impl::update_dht_bootstrap_nodes)
+		SET(dht_bootstrap_nodes, "dht.libtorrent.org:25401", &session_impl::update_dht_bootstrap_nodes),
+		SET(nsw_bootstrap_nodes, "127.0.0.1:26401-'one two three'", &session_impl::update_nsw_bootstrap_nodes)
 	}};
 
 	std::array<bool_setting_entry_t, settings_pack::num_bool_settings> bool_settings =
@@ -184,6 +185,8 @@ namespace libtorrent
 		SET(enable_natpmp, true, &session_impl::update_natpmp),
 		SET(enable_lsd, true, &session_impl::update_lsd),
 		SET(enable_dht, true, &session_impl::update_dht),
+		SET(enable_nsw, true, &session_impl::update_nsw),
+		SET(enable_gateway_mode, false, nullptr),
 		SET(prefer_rc4, false, nullptr),
 		SET(proxy_hostnames, true, nullptr),
 		SET(proxy_peer_connections, true, nullptr),

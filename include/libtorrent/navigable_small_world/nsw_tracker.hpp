@@ -5,6 +5,7 @@
 
 #include "libtorrent/navigable_small_world/node.hpp"
 #include "libtorrent/navigable_small_world/nsw_state.hpp"
+#include "libtorrent/navigable_small_world/term_vector.hpp"
 
 #include "libtorrent/socket.hpp"
 #include "libtorrent/deadline_timer.hpp"
@@ -16,9 +17,7 @@ namespace libtorrent
 {
 	struct counters;
 	struct nsw_settings;
-#ifndef TORRENT_NO_DEPRECATE
-	struct session_status;
-#endif
+
 }
 
 namespace libtorrent { namespace nsw
@@ -28,8 +27,58 @@ struct TORRENT_EXTRA_EXPORT nsw_tracker final
 		: udp_socket_interface
 		, std::enable_shared_from_this<nsw_tracker>
 	{
+		typedef struct timers_t{
+			deadline_timer key_refresh_timer;
+			deadline_timer connection_timer;
+			deadline_timer refresh_timer;
+
+			timers_t(io_service& io_serv)
+					:key_refresh_timer(io_serv)
+					,connection_timer(io_serv)
+					,refresh_timer(io_serv)
+			{}
+		} timers_t;
+
+		typedef enum {not_init=0,started,aborted} status_t;
+
 		using send_fun_t = std::function<void(udp::endpoint const&
 			, span<char const>, error_code&, int)>;
+private:
+		using node_collection_t = std::map<std::string, std::shared_ptr<node>>;
+		bdecode_node m_msg;
+
+		counters& m_counters;
+//		nsw_storage_interface& m_storage;
+		nsw_state m_state; // to be used only once
+//		node m_nsw_templ;
+
+		send_fun_t m_send_fun;
+		nsw_logger_interface* m_log;
+		//nsw_logger_observer_interface* m_observer;
+		std::vector<char> m_send_buf;
+
+		std::unordered_map<node_id,std::shared_ptr<timers_t>> m_timers_vec;
+//		std::vector<deadline_timer> m_connection_timer_vec;
+//		std::vector<deadline_timer> m_refresh_timer_vec;
+
+		nsw_settings const& m_settings;
+
+		node_collection_t m_nodes;
+		// these are used when starting new node
+		std::vector<std::pair<vector_t, udp::endpoint>> m_nsw_gate_nodes;
+		status_t m_status;
+
+//		udp::resolver m_host_resolver;
+
+		// state for the send rate limit
+//		int m_send_quota;
+		time_point m_last_tick;
+		io_service& m_io_srv;
+		const find_data::nodes_callback* m_current_callback;
+//		bool m_is_gateway_mode;
+
+public:
+
 
 		nsw_tracker(nsw_logger_observer_interface* observer
 			, io_service& ios
@@ -40,48 +89,35 @@ struct TORRENT_EXTRA_EXPORT nsw_tracker final
 			, nsw_state state);
 		virtual ~nsw_tracker();
 
-		//void start(find_data::nodes_callback const& f);
-		void start();
+		void start(find_data::nodes_callback const& f);
 		void stop();
 
 		void update_node_id();
+		void update_node_description(node& item, std::string const& new_descr);
 
-		void add_node(udp::endpoint const& node);
-		void add_router_node(udp::endpoint const& node);
+		void add_node(sha1_hash const& nid, std::string const& description);
+		void add_gate_node(udp::endpoint const& node, std::string const& description);
 
 		nsw_state state() const;
 
 		enum flags_t { flag_seed = 1, flag_implied_port = 2 };
-		void get_peers(sha1_hash const& ih
-			, std::function<void(std::vector<tcp::endpoint> const&)> f);
+		void get_friends(node& item
+			, sha1_hash const& ih
+			, std::string const& target
+			, std::function<void(std::multimap<double, tcp::endpoint> const&)> f);
 		void announce(sha1_hash const& ih, int listen_port, int flags
 			, std::function<void(std::vector<tcp::endpoint> const&)> f);
 
-		// void get_item(sha1_hash const& target
-		// 	, std::function<void(item const&)> cb);
+//		void direct_request(udp::endpoint const& ep, entry& e
+//			, std::function<void(msg const&)> f);
 
-		// void get_item(public_key const& key
-		// 	, std::function<void(item const&, bool)> cb
-		// 	, std::string salt = std::string());
+//		void nsw_status(std::vector<nsw_routing_bucket>& table
+//		 	, std::vector<nsw_lookup>& requests);
+//		void update_stats_counters(counters& c) const;
 
-		// void put_item(entry const& data
-		// 	, std::function<void(int)> cb);
+		void incoming_error(error_code const& ec
+					, udp::endpoint const& ep);
 
-		// void put_item(public_key const& key
-		// 	, std::function<void(item const&, int)> cb
-		// 	, std::function<void(item&)> data_cb, std::string salt = std::string());
-
-		void direct_request(udp::endpoint const& ep, entry& e
-			, std::function<void(msg const&)> f);
-
-#ifndef TORRENT_NO_DEPRECATE
-		void nsw_status(session_status& s);
-#endif
-		// void nsw_status(std::vector<nsw_routing_bucket>& table
-		// 	, std::vector<nsw_lookup>& requests);
-		void update_stats_counters(counters& c) const;
-
-		void incoming_error(error_code const& ec, udp::endpoint const& ep);
 		bool incoming_packet(udp::endpoint const& ep, span<char const> buf);
 
 	private:
@@ -90,43 +126,13 @@ struct TORRENT_EXTRA_EXPORT nsw_tracker final
 		{ return shared_from_this(); }
 
 		void connection_timeout(node& n, error_code const& e);
-		void refresh_timeout(error_code const& e);
-		void refresh_key(error_code const& e);
+		void ping_timeout(node& n, error_code const& e);
+		void refresh_key(node& n, error_code const& e);
 		void update_storage_node_ids();
 
-		virtual bool has_quota() override;
+//		virtual bool has_quota() override;
 		virtual bool send_packet(entry& e, udp::endpoint const& addr) override;
 
-		bdecode_node m_msg;
-
-		counters& m_counters;
-//		nsw_storage_interface& m_storage;
-		nsw_state m_state; // to be used only once
-		node m_nsw;
-#if TORRENT_USE_IPV6
-		node m_nsw6;
-#endif
-		send_fun_t m_send_fun;
-		nsw_logger_interface* m_log;
-
-		std::vector<char> m_send_buf;
-
-		deadline_timer m_key_refresh_timer;
-		deadline_timer m_connection_timer;
-#if TORRENT_USE_IPV6
-		deadline_timer m_connection_timer6;
-#endif
-		deadline_timer m_refresh_timer;
-		nsw_settings const& m_settings;
-
-		std::map<std::string, node*> m_nodes;
-
-		bool m_abort;
-
-		udp::resolver m_host_resolver;
-
-
-		time_point m_last_tick;
 	};
 }}
 

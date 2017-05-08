@@ -457,6 +457,13 @@ namespace libtorrent
 		METRIC(dht, dht_invalid_put)
 		METRIC(dht, dht_invalid_get)
 
+		// METRIC(nsw, nsw_ping_in)
+  //       METRIC(nsw, nsw_ping_out)
+  //       METRIC(nsw, nsw_add_friend_in)
+  //       METRIC(nsw, nsw_add_friend_out)
+  //       METRIC(nsw, nsw_get_friends_in)
+  //       METRIC(nsw, nsw_get_friends_out)
+
 		// uTP counters. Each counter represents the number of time each event
 		// has occurred.
 		METRIC(utp, utp_packet_loss)

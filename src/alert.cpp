@@ -2309,5 +2309,12 @@ namespace libtorrent {
 		return msg;
 	}
 
+	nsw_bootstrap_alert::nsw_bootstrap_alert(aux::stack_allocator&)
+	{}
+
+	std::string nsw_bootstrap_alert::message() const
+	{
+		return "NSW bootstrap complete";
+	}
 
 } // namespace libtorrent

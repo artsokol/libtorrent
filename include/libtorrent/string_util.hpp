@@ -88,6 +88,10 @@ namespace libtorrent
 	TORRENT_EXTRA_EXPORT void parse_comma_separated_string_port(
 		std::string const& in, std::vector<std::pair<std::string, int>>& out);
 
+	// parses node with description
+	//example: "127.0.0.1:6881-'one two three'"
+	TORRENT_EXTRA_EXPORT void parse_comma_separated_nsw_node_description(std::string const& in
+			, std::vector<std::tuple<std::string, int, std::string>>& out);
 	// this parses the string that's used as the outgoing_interfaces setting.
 	// it is a comma separated list of IPs and device names. For example:
 	// "eth0, eth1, 127.0.0.1"

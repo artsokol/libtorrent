@@ -82,6 +82,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/aux_/portmap.hpp"
 #include "libtorrent/aux_/lsd.hpp"
 #include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
+#include "libtorrent/navigable_small_world/nsw_state.hpp"
 
 #ifndef TORRENT_NO_DEPRECATE
 #include "libtorrent/session_settings.hpp"
@@ -236,7 +237,8 @@ namespace libtorrent
 				plugins_all_idx = 0, // to store all plugins
 				plugins_optimistic_unchoke_idx = 1, // optimistic_unchoke_feature
 				plugins_tick_idx = 2, // tick_feature
-				plugins_dht_request_idx = 3 // dht_request_feature
+				plugins_dht_request_idx = 3, // dht_request_feature
+				plugins_nsw_request_idx = 4
 			};
 
 			template <typename Fun, typename... Args>
@@ -659,6 +661,63 @@ namespace libtorrent
 			virtual external_ip external_address() const override;
 
 
+#ifndef TORRENT_DISABLE_NSW
+			nsw::nsw_tracker* nsw() override { return m_nsw.get(); }
+			bool is_nsw_running() const { return (m_nsw.get() != nullptr); }
+//			bool announce_dht() const override { return !m_listen_sockets.empty(); }
+			void on_nsw_name_lookup(error_code const& e
+			 	, std::vector<address> const& addresses, int port);
+
+			//void add_nsw_node_name(/*std::pair<std::string, int> const& node, */std::string const&  descr);
+			void add_nsw_node(sha1_hash const& nid, std::string const&  descr) override;
+			void add_nsw_gate(std::tuple<std::string, int, std::string> const& node);
+			// void on_nsw_gate_lookup(error_code const& e
+			// 	, std::vector<address> const& addresses, int port, std::string& descr);
+			void set_nsw_settings(nsw_settings const& s);
+			nsw_settings const& get_nsw_settings() const { return m_nsw_settings; }
+			//void set_nsw_state(dht::dht_state state);
+			//void set_dht_storage(dht::dht_storage_constructor_type sc);
+			void start_nsw();
+			void stop_nsw();
+			bool has_nsw() const override;
+
+			// this is called for torrents when they are started
+			// it will prioritize them for announcing to
+			// the DHT, to get the initial peers quickly
+//			void prioritize_dht(std::weak_ptr<torrent> t) override;
+
+			// void get_immutable_callback(sha1_hash target
+			// 	, dht::item const& i);
+			// void get_mutable_callback(dht::item const& i, bool);
+
+			// void dht_get_immutable_item(sha1_hash const& target);
+
+			// void dht_get_mutable_item(std::array<char, 32> key
+			// 	, std::string salt = std::string());
+
+			// void dht_put_immutable_item(entry const& data, sha1_hash target);
+
+			// void dht_put_mutable_item(std::array<char, 32> key
+			// 	, std::function<void(entry&, std::array<char,64>&
+			// 		, std::int64_t&, std::string const&)> cb
+			// 	, std::string salt = std::string());
+
+			void nsw_get_peers(sha1_hash const& info_hash);
+			void nse_announce(sha1_hash const& info_hash, int port = 0, int flags = 0);
+
+			void nsw_direct_request(udp::endpoint ep, entry& e
+				, void* userdata = nullptr);
+
+
+//			void on_dht_announce(error_code const& e);
+//			void on_dht_name_lookup(error_code const& e
+//				, std::vector<address> const& addresses, int port);
+//			void on_dht_router_name_lookup(error_code const& e
+//				, std::vector<address> const& addresses, int port);
+#endif
+
+
+
 			// implements nsw_observer
 			virtual void set_nsw_external_address(address const& ip
 				, address const& source) override;
@@ -676,7 +735,8 @@ namespace libtorrent
 			virtual void nsw_log_packet(nsw_log_message_direction_t dir, span<char const> pkt
 				, udp::endpoint const& node) override;
 #endif
-
+			virtual bool on_nsw_request(string_view query
+				, nsw::msg const& request, entry& response) override;
 
 			// used when posting synchronous function
 			// calls to session_impl and torrent objects
@@ -732,9 +792,11 @@ namespace libtorrent
 			void update_natpmp();
 			void update_lsd();
 			void update_dht();
+			void update_nsw();
 			void update_count_slow();
 			void update_peer_fingerprint();
 			void update_dht_bootstrap_nodes();
+			void update_nsw_bootstrap_nodes();
 
 			void update_socket_buffer_size();
 			void update_dht_announce_interval();
@@ -958,6 +1020,9 @@ namespace libtorrent
 			dht::dht_state m_dht_state;
 #endif
 
+#ifndef TORRENT_DISABLE_NSW
+			nsw::nsw_state m_nsw_state;
+#endif
 			// this is initialized to the unchoke_interval
 			// session_setting and decreased every second.
 			// when it reaches zero, it is reset to the
@@ -1082,15 +1147,16 @@ namespace libtorrent
 //			std::unique_ptr<dht::dht_storage_interface> m_nsw_storage;
 			std::shared_ptr<nsw::nsw_tracker> m_nsw;
 			nsw_settings m_nsw_settings;
-			// nsw::dht_storage_constructor_type m_dht_storage_constructor
-			// 	= dht::dht_default_storage_constructor;
 
 			// // these are used when starting the DHT
 			// // (and bootstrapping it), and then erased
 			// std::vector<udp::endpoint> m_dht_router_nodes;
 
-			std::vector<udp::endpoint> m_nsw_nodes;
+			//std::vector<std::pair<udp::endpoint, std::string>> m_nsw_nodes;
+			std::vector<std::pair<sha1_hash,std::string>> m_nsw_nodes;
 
+			std::vector<std::pair<udp::endpoint, std::string>> m_nsw_gate_nodes;
+			int m_gate_lookups = 0;
 #endif
 
 			void send_udp_packet_hostname(char const* hostname
@@ -1252,7 +1318,7 @@ namespace libtorrent
 
 #ifndef TORRENT_DISABLE_EXTENSIONS
 			// this is a list to allow extensions to potentially remove themselves.
-			std::array<std::vector<std::shared_ptr<plugin>>, 4> m_ses_extensions;
+			std::array<std::vector<std::shared_ptr<plugin>>, 5> m_ses_extensions;
 #endif
 
 #ifndef TORRENT_NO_DEPRECATE

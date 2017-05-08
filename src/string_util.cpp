@@ -361,6 +361,56 @@ namespace libtorrent
 		}
 	}
 
+	void parse_comma_separated_nsw_node_description(std::string const& in
+			, std::vector<std::tuple<std::string, int, std::string>>& out)
+	{
+		out.clear();
+
+		std::string::size_type start = 0;
+		std::string::size_type end = 0;
+
+		while (start < in.size())
+		{
+			while (start < in.size()
+				&& is_space(in[start]))
+				++start;
+
+			end = in.find_first_of(',', start);
+			if (end == std::string::npos) end = in.size();
+
+			std::string::size_type colon = in.find_last_of(':', end);
+			std::string::size_type port_colon_end = in.find_last_of('-', end);
+			bool is_description = false;
+
+			if (colon != std::string::npos && colon > start)
+			{
+				int port = atoi(in.substr(colon + 1, port_colon_end - colon - 1).c_str());
+
+				if (in[port_colon_end + 1] == '\'' &&
+					in[end-1] == '\'')
+				{
+					is_description = true;
+
+					//std::string descr = in.substr(port_colon_end + 2, end-1-port_colon_end-2);
+				}
+
+				// skip trailing spaces
+				std::string::size_type soft_end = colon;
+				while (soft_end > start
+					&& is_space(in[soft_end-1]))
+					--soft_end;
+
+				out.push_back(std::make_tuple(in.substr(start, soft_end - start)
+											, port
+											,(is_description)
+											?in.substr(port_colon_end + 2, end-1-port_colon_end-2)
+											:""));
+			}
+
+			start = end + 1;
+		}
+	}
+
 	void parse_comma_separated_string(std::string const& in, std::vector<std::string>& out)
 	{
 		out.clear();

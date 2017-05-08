@@ -209,6 +209,8 @@ namespace libtorrent
 			// include this bit if your plugin needs to have on_alert()
 			// called
 			alert_feature = 8,
+
+			nsw_request_feature = 16,
 		};
 
 		// This function is expected to return a bitmask indicating which features
@@ -245,6 +247,11 @@ namespace libtorrent
 		// If your plugin expects this to be called, make sure to include the flag
 		// ``alert_feature`` in the return value from implemented_features().
 		virtual void on_alert(alert const*) {}
+
+		virtual bool on_nsw_request(string_view /* query */
+			, udp::endpoint const& /* source */, bdecode_node const& /* message */
+			, entry& /* response */)
+		{ return false; }
 
 		// return true if the add_torrent_params should be added
 		virtual bool on_unknown_torrent(sha1_hash const& /* info_hash */

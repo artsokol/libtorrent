@@ -6,7 +6,7 @@
 namespace libtorrent {
 namespace nsw
 {
-	inline node_id nsw_state::extract_node_id(bdecode_node const& e, string_view key)
+	node_id nsw_state::extract_node_id(bdecode_node const& e, string_view key)
 	{
 		if (e.type() != bdecode_node::dict_t) return node_id();
 
@@ -34,15 +34,18 @@ namespace nsw
 	}
 
 
-	inline void nsw_state::clear()
+	void nsw_state::clear()
 	{
 		nid.clear();
+#if TORRENT_USE_IPV6
 		nid6.clear();
-
+#endif
 		nodes.clear();
 		nodes.shrink_to_fit();
+#if TORRENT_USE_IPV6
 		nodes6.clear();
 		nodes6.shrink_to_fit();
+#endif
 	}
 
 	void nsw_state::read_nsw_state(bdecode_node const& e, nsw_state& ret)

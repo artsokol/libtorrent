@@ -667,6 +667,8 @@ namespace aux {
 #ifndef TORRENT_DISABLE_DHT
 		update_dht_announce_interval();
 #endif
+		update_nsw_bootstrap_nodes();
+		update_nsw();
 	}
 
 	void session_impl::async_resolve(std::string const& host, int flags
@@ -844,6 +846,8 @@ namespace aux {
 			m_ses_extensions[plugins_tick_idx].push_back(ext);
 		if (features & plugin::dht_request_feature)
 			m_ses_extensions[plugins_dht_request_idx].push_back(ext);
+		if (features & plugin::nsw_request_feature)
+			m_ses_extensions[plugins_nsw_request_idx].push_back(ext);
 		if (features & plugin::alert_feature)
 			m_alerts.add_extension(ext);
 		session_handle h(this);
@@ -913,6 +917,9 @@ namespace aux {
 #ifndef TORRENT_DISABLE_DHT
 		stop_dht();
 		m_dht_announce_timer.cancel(ec);
+#endif
+#ifndef TORRENT_DISABLE_NSW
+		stop_nsw();
 #endif
 		m_lsd_announce_timer.cancel(ec);
 
@@ -2323,7 +2330,10 @@ namespace aux {
 					if (m_dht)
 						m_dht->incoming_error(packet.error, packet.from);
 #endif
-
+#ifndef TORRENT_DISABLE_NSW
+					if (m_nsw)
+						m_nsw->incoming_error(packet.error, packet.from);
+#endif
 					m_tracker_manager.incoming_error(packet.error, packet.from);
 					continue;
 				}
@@ -2336,15 +2346,22 @@ namespace aux {
 				{
 					// if it wasn't a uTP packet, try the other users of the UDP
 					// socket
-					bool handled = false;
+					bool handled_by_dht = false;
+					bool handled_by_nsw = false;
 #ifndef TORRENT_DISABLE_DHT
 					if (m_dht && buf.size() > 20 && buf.front() == 'd' && buf.back() == 'e')
 					{
-						handled = m_dht->incoming_packet(packet.from, buf);
+						//handled_by_dht = m_dht->incoming_packet(packet.from, buf);
+					}
+#endif
+#ifndef TORRENT_DISABLE_NSW
+					if ( m_nsw && buf.size() > 20 && buf.front() == 'd' && buf.back() == 'e')
+					{
+						handled_by_nsw = m_nsw->incoming_packet(packet.from, buf);
 					}
 #endif
 
-					if (!handled)
+					if (!handled_by_dht && !handled_by_nsw)
 					{
 						m_tracker_manager.incoming_packet(packet.from, buf);
 					}
@@ -3563,6 +3580,22 @@ namespace aux {
 	}
 #endif
 
+#ifndef TORRENT_DISABLE_NSW
+
+	void session_impl::add_nsw_node(sha1_hash const& nid, std::string const&  descr)
+	{
+		TORRENT_ASSERT(is_single_thread());
+
+		if (m_nsw) m_nsw->add_node(nid, descr);
+		else m_nsw_nodes.push_back(std::make_pair(nid, descr));
+	}
+
+	bool session_impl::has_nsw() const
+	{
+		return m_nsw.get() != nullptr;
+	}
+
+#endif
 	void session_impl::on_lsd_announce(error_code const& e)
 	{
 		COMPLETE_ASYNC("session_impl::on_lsd_announce");
@@ -4655,11 +4688,20 @@ namespace aux {
 #ifndef TORRENT_DISABLE_DHT
 		if (params.ti)
 		{
-			for (auto const& n : params.ti->nodes())
+			for (auto const& n : params.ti->nodes()){
 				add_dht_node_name(n);
+			}
 		}
 #endif
-
+		//std::string interfaces1 = m_listen_interfaces;
+		//std::string interface2 = m_settings.get_str(settings_pack::listen_interfaces);
+#ifndef TORRENT_DISABLE_NSW
+		if (params.ti)
+		{
+			//add_nsw_node_name(params.ti->comment());
+			add_nsw_node(params.ti->info_hash(), params.ti->comment());
+		}
+#endif
 		if (m_alerts.should_post<torrent_added_alert>())
 			m_alerts.emplace_alert<torrent_added_alert>(handle);
 
@@ -5205,6 +5247,16 @@ namespace aux {
 #endif
 	}
 
+	void session_impl::update_nsw()
+	{
+#ifndef TORRENT_DISABLE_NSW
+		if (m_settings.get_bool(settings_pack::enable_nsw))
+			start_nsw();
+		else
+			stop_nsw();
+#endif
+	}
+
 	void session_impl::update_peer_fingerprint()
 	{
 		// ---- generate a peer id ----
@@ -5228,6 +5280,18 @@ namespace aux {
 
 		for (auto const& n : nodes)
 			add_dht_router(n);
+#endif
+	}
+
+	void session_impl::update_nsw_bootstrap_nodes()
+	{
+#ifndef TORRENT_DISABLE_NSW
+		std::string const& node_list = m_settings.get_str(settings_pack::nsw_bootstrap_nodes);
+		std::vector<std::tuple<std::string, int, std::string>> nodes;
+		parse_comma_separated_nsw_node_description(node_list, nodes);
+
+		for (auto const& n : nodes)
+			add_nsw_gate(n);
 #endif
 	}
 
@@ -5803,6 +5867,153 @@ namespace aux {
 
 #endif
 
+#ifndef TORRENT_DISABLE_NSW
+
+	void session_impl::start_nsw()
+	{
+//		INVARIANT_CHECK;
+
+		stop_nsw();
+
+		// postpone starting the DHT if we're still resolving the DHT router
+//		if (m_outstanding_router_lookups > 0) return;
+
+		if (m_abort) return;
+
+		m_nsw = std::make_shared<nsw::nsw_tracker>(
+			static_cast<nsw::nsw_logger_observer_interface*>(this)
+			, m_io_service
+			, std::bind(&session_impl::send_udp_packet, this, false, _1, _2, _3, _4)
+			, m_nsw_settings
+			, m_stats_counters
+			, std::move(m_nsw_state));
+
+		for (auto const& n : m_nsw_gate_nodes)
+		{
+		 	m_nsw->add_gate_node(n.first, n.second);
+		}
+		m_nsw_gate_nodes.clear();
+		m_nsw_gate_nodes.shrink_to_fit();
+
+		for (auto const& n : m_nsw_nodes)
+		{
+			m_nsw->add_node(n.first, n.second);
+		}
+		m_nsw_nodes.clear();
+		m_nsw_nodes.shrink_to_fit();
+
+		auto cb = [this](
+			std::vector<std::pair<nsw::node_entry, std::string>> const&)
+		{
+			if (m_alerts.should_post<nsw_bootstrap_alert>())
+				m_alerts.emplace_alert<nsw_bootstrap_alert>();
+		};
+		m_nsw->start(cb);
+	}
+
+	void session_impl::stop_nsw()
+	{
+		if (m_nsw)
+		{
+			m_nsw->stop();
+			m_nsw.reset();
+		}
+	}
+
+	void session_impl::set_nsw_settings(nsw_settings const& settings)
+	{
+		m_nsw_settings = settings;
+	}
+
+	// void session_impl::add_nsw_node_name(/*std::pair<std::string, int> const& node, */std::string const& descr)
+	// {
+	// 	// error_code ec;
+	// 	// address ip = address::from_string(node.first.c_str(), ec);
+	// 	// if (!ec)
+	// 	// {
+	// 	// 	udp::endpoint ep(ip, std::uint16_t(node.second));
+	// 		m_nsw_nodes.push_back(descr);//make_pair(ep, descr));
+	// 	// }
+	// 	// else
+	// 	// 	return;
+	// }
+
+	// void session_impl::on_nsw_name_lookup(error_code const& e
+	// 	, std::vector<address> const& addresses, int port)
+	// {
+
+	// }
+
+	void session_impl::add_nsw_gate(std::tuple<std::string, int, std::string> const& node)
+	{
+		ADD_OUTSTANDING_ASYNC("session_impl::on_nsw_gate_lookup");
+
+		if (m_settings.get_bool(settings_pack::enable_gateway_mode) == true)
+		{
+			return;
+		}
+		// ++m_gate_lookups;
+		// m_host_resolver.async_resolve(std::get<0>(node), resolver_interface::abort_on_shutdown
+		// 	, std::bind(&session_impl::on_nsw_gate_lookup
+		// 		, this, _1, _2, std::get<1>(node),std::get<2>(node)));
+		error_code ec;
+		address ip = address::from_string(std::get<0>(node).c_str(), ec);
+		if (!ec)
+		{
+			udp::endpoint ep(ip, std::uint16_t(std::get<1>(node)));
+			std::string descr = std::get<2>(node);
+			if (m_nsw)
+				m_nsw->add_gate_node(ep, descr);
+			else
+				m_nsw_gate_nodes.push_back(std::make_pair(ep, descr));
+		}
+		else
+			return;
+		//for (auto const& addr : addresses)
+		//{
+			// router nodes should be added before the NSW servece is started
+			// udp::endpoint ep(std::get<0>(node), std::uint16_t(std::get<1>(node)));
+			// if (m_nsw) m_nsw->add_gate_node(ep, descr);
+			// m_nsw_gate_nodes.push_back(std::make_pair(ep, descr));
+		//}
+	}
+
+// 	void session_impl::on_nsw_gate_lookup(error_code const& e
+// 		, std::vector<address> const& addresses, int port, std::string& descr)
+// 	{
+// 		COMPLETE_ASYNC("session_impl::on_nsw_gate_lookup");
+// 		--m_gate_lookups;
+
+// 		if (e)
+// 		{
+// 			// if (m_alerts.should_post<nsw_error_alert>())
+// 			// 	m_alerts.emplace_alert<nsw_error_alert>(
+// 			// 		nsw_error_alert::hostname_lookup, e);
+
+// //			if (m_gate_lookups == 0) update_nsw();
+// 			return;
+// 		}
+
+
+// 		for (auto const& addr : addresses)
+// 		{
+// 			// router nodes should be added before the NSW servece is started
+// 			udp::endpoint ep(addr, std::uint16_t(port));
+// 			if (m_nsw) m_nsw->add_gate_node(ep, descr);
+// 			//m_nsw_gate_nodes.push_back(std::make_pair(ep, descr));
+// 		}
+
+// //		if (m_gate_lookups == 0) update_nsw();
+// 	}
+
+	void session_impl::nsw_get_peers(sha1_hash const& info_hash)
+	{
+
+	}
+
+
+#endif
+
 #if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
 	void session_impl::add_obfuscated_hash(sha1_hash const& obfuscated
 		, std::weak_ptr<torrent> const& t)
@@ -6213,6 +6424,9 @@ namespace aux {
 		stop_natpmp();
 #ifndef TORRENT_DISABLE_DHT
 		stop_dht();
+#endif
+#ifndef TORRENT_DISABLE_NSW
+		stop_nsw();
 #endif
 	}
 
@@ -6925,72 +7139,89 @@ namespace aux {
 #endif
 		}
 
-		void tracker_logger::tracker_request_error(tracker_request const&
-			, int response_code, error_code const& ec, const std::string& str
-			, int retry_interval)
-		{
-			TORRENT_UNUSED(retry_interval);
-			debug_log("*** tracker error: %d: %s %s"
-				, response_code, ec.message().c_str(), str.c_str());
-		}
+	void tracker_logger::tracker_request_error(tracker_request const&
+		, int response_code, error_code const& ec, const std::string& str
+		, int retry_interval)
+	{
+		TORRENT_UNUSED(retry_interval);
+		debug_log("*** tracker error: %d: %s %s"
+			, response_code, ec.message().c_str(), str.c_str());
+	}
 
-		bool tracker_logger::should_log() const
-		{
-			return m_ses.alerts().should_post<log_alert>();
-		}
+	bool tracker_logger::should_log() const
+	{
+		return m_ses.alerts().should_post<log_alert>();
+	}
 
-		void tracker_logger::debug_log(const char* fmt, ...) const
-		{
-			if (!m_ses.alerts().should_post<log_alert>()) return;
+	void tracker_logger::debug_log(const char* fmt, ...) const
+	{
+		if (!m_ses.alerts().should_post<log_alert>()) return;
 
-			va_list v;
-			va_start(v, fmt);
-			m_ses.alerts().emplace_alert<log_alert>(fmt, v);
-			va_end(v);
-		}
+		va_list v;
+		va_start(v, fmt);
+		m_ses.alerts().emplace_alert<log_alert>(fmt, v);
+		va_end(v);
+	}
 
-		bool session_impl::nsw_should_log(nsw_log_level_t) const
-		{
-			return m_alerts.should_post<nsw_log_alert>();
-		}
+	bool session_impl::nsw_should_log(nsw_log_level_t) const
+	{
+		return m_alerts.should_post<nsw_log_alert>();
+	}
 
-		TORRENT_FORMAT(3,4)
-		void session_impl::nsw_log(nsw_log_level_t m, char const* fmt, ...)
-		{
-			if (!m_alerts.should_post<nsw_log_alert>()) return;
+	TORRENT_FORMAT(3,4)
+	void session_impl::nsw_log(nsw_log_level_t m, char const* fmt, ...)
+	{
+		if (!m_alerts.should_post<nsw_log_alert>()) return;
 
-			va_list v;
-			va_start(v, fmt);
-			m_alerts.emplace_alert<nsw_log_alert>(
-				static_cast<nsw_log_alert::nsw_log_level_t>(m), fmt, v);
-			va_end(v);
-		}
+		va_list v;
+		va_start(v, fmt);
+		m_alerts.emplace_alert<nsw_log_alert>(
+			static_cast<nsw_log_alert::nsw_log_level_t>(m), fmt, v);
+		va_end(v);
+	}
 
-		void session_impl::nsw_log_packet(nsw_log_message_direction_t dir, span<char const> pkt
-			, udp::endpoint const& node)
-		{
-			if (!m_alerts.should_post<nsw_pkt_alert>()) return;
+	void session_impl::nsw_log_packet(nsw_log_message_direction_t dir, span<char const> pkt
+		, udp::endpoint const& node)
+	{
+		if (!m_alerts.should_post<nsw_pkt_alert>()) return;
 
-			nsw_pkt_alert::nsw_log_message_direction_t d = dir == nsw::nsw_logger_interface::incoming_message
-				? nsw_pkt_alert::incoming : nsw_pkt_alert::outgoing;
+		nsw_pkt_alert::nsw_log_message_direction_t d = dir == nsw::nsw_logger_interface::incoming_message
+			? nsw_pkt_alert::incoming : nsw_pkt_alert::outgoing;
 
-			m_alerts.emplace_alert<nsw_pkt_alert>(pkt, d, node);
-		}
+		m_alerts.emplace_alert<nsw_pkt_alert>(pkt, d, node);
+	}
 #endif // TORRENT_DISABLE_LOGGING
 
-		void session_impl::get_friends(sha1_hash const& ih, std::string const& text)
-		{
-			if (!m_alerts.should_post<nsw_get_friends_alert>()) return;
-			m_alerts.emplace_alert<nsw_get_friends_alert>(ih, text);
-		}
+	void session_impl::get_friends(sha1_hash const& ih, std::string const& text)
+	{
+		if (!m_alerts.should_post<nsw_get_friends_alert>()) return;
+		m_alerts.emplace_alert<nsw_get_friends_alert>(ih, text);
+	}
 
-		void session_impl::outgoing_get_friends(sha1_hash const& nid
-			, std::string const& target_text, udp::endpoint const& ep)
-		{
-			if (!m_alerts.should_post<nsw_outgoing_get_friends_alert>()) return;
-			m_alerts.emplace_alert<nsw_outgoing_get_friends_alert>(nid, target_text, ep);
-		}
+	void session_impl::outgoing_get_friends(sha1_hash const& nid
+		, std::string const& target_text, udp::endpoint const& ep)
+	{
+		if (!m_alerts.should_post<nsw_outgoing_get_friends_alert>()) return;
+		m_alerts.emplace_alert<nsw_outgoing_get_friends_alert>(nid, target_text, ep);
+	}
 
+	bool session_impl::on_nsw_request(string_view query
+		, nsw::msg const& request, entry& response)
+	{
+#ifndef TORRENT_DISABLE_EXTENSIONS
+		for (auto const& ext : m_ses_extensions[plugins_nsw_request_idx])
+		{
+			if (ext->on_nsw_request(query
+				, request.addr, request.message, response))
+				return true;
+		}
+#else
+		TORRENT_UNUSED(query);
+		TORRENT_UNUSED(request);
+		TORRENT_UNUSED(response);
+#endif
+		return false;
+	}
 
 	// this is the NSW observer version. NSW is the implied source
 	void session_impl::set_nsw_external_address(address const& ip

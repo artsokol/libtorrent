@@ -89,6 +89,13 @@ namespace libtorrent
 		struct dht_tracker;
 	}
 #endif
+
+#ifndef TORRENT_DISABLE_NSW
+	namespace nsw
+	{
+		struct nsw_tracker;
+	}
+#endif
 }
 
 namespace libtorrent { namespace aux
@@ -315,6 +322,15 @@ namespace libtorrent { namespace aux
 		virtual int external_udp_port() const = 0;
 		virtual dht::dht_tracker* dht() = 0;
 		virtual void prioritize_dht(std::weak_ptr<torrent> t) = 0;
+#endif
+
+#ifndef TORRENT_DISABLE_DHT
+//		virtual bool announce_dht() const = 0;
+		virtual void add_nsw_node(sha1_hash const& nid, std::string const&  descr) = 0;
+		virtual bool has_nsw() const = 0;
+//		virtual int external_udp_port() const = 0;
+		virtual nsw::nsw_tracker* nsw() = 0;
+//		virtual void prioritize_dht(std::weak_ptr<torrent> t) = 0;
 #endif
 
 		virtual counters& stats_counters() = 0;

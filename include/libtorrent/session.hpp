@@ -152,10 +152,11 @@ namespace libtorrent
 		std::vector<std::shared_ptr<plugin>> extensions;
 
 		libtorrent::dht_settings dht_settings;
-
 		dht::dht_state dht_state;
 
 		dht::dht_storage_constructor_type dht_storage_constructor;
+
+		libtorrent::nsw_settings nsw_settings;
 	};
 
 	// This function helps to construct a ``session_params`` from a
@@ -321,6 +322,7 @@ namespace libtorrent
 				pack.set_bool(settings_pack::enable_natpmp, false);
 				pack.set_bool(settings_pack::enable_lsd, false);
 				pack.set_bool(settings_pack::enable_dht, false);
+				pack.set_bool(settings_pack::enable_nsw, false);
 			}
 			start(flags, std::move(pack), nullptr);
 		}

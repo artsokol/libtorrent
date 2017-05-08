@@ -326,6 +326,10 @@ namespace libtorrent
 		m_impl->set_dht_storage(params.dht_storage_constructor);
 #endif
 
+#ifndef TORRENT_DISABLE_NSW
+		m_impl->set_nsw_settings(params.nsw_settings);
+#endif
+
 		m_impl->start_session(std::move(params.settings));
 
 		if (internal_executor)

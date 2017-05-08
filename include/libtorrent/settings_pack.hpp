@@ -220,6 +220,7 @@ namespace libtorrent
 			// effect until the DHT is restarted.
 			dht_bootstrap_nodes,
 
+			nsw_bootstrap_nodes,
 			max_string_setting_internal
 		};
 
@@ -666,6 +667,10 @@ namespace libtorrent
 			// torrents.
 			enable_dht,
 
+			// starts the nsw node.
+			enable_nsw,
+			// run nsw gateway mode.
+			enable_gateway_mode,
 			// if the allowed encryption level is both, setting this to true will
 			// prefer rc4 if both methods are offered, plaintext otherwise
 			prefer_rc4,

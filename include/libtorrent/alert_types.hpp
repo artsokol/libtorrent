@@ -2559,6 +2559,18 @@ namespace libtorrent
 
 	};
 
+		// This alert is posted when the initial DHT bootstrap is done.
+	struct TORRENT_EXPORT nsw_bootstrap_alert final : alert
+	{
+		// internal
+		explicit nsw_bootstrap_alert(aux::stack_allocator& alloc);
+
+		TORRENT_DEFINE_ALERT(nsw_bootstrap_alert, 94)
+
+		static const int static_category = alert::nsw_notification;
+		virtual std::string message() const override;
+	};
+
 	struct TORRENT_EXPORT nsw_log_alert final : alert
 	{
 		enum nsw_log_level_t
