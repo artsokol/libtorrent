@@ -1185,6 +1185,11 @@ int main(int argc, char* argv[])
 #if TORRENT_USE_I2P
 			"  -i <i2p-host>         the hostname to an I2P SAM bridge to use\n"
 #endif
+#ifndef TORRENT_DISABLE_NSW
+			"\n NSW SETTINGS\n"
+			"  -g                    enable gateway mode.\n"
+			"  -p <port>             bind to specified port.\n"
+#endif
 			"\n DISK OPTIONS\n"
 			"  -a <mode>             sets the allocation mode. [sparse|allocate]\n"
 			"  -0                    disable disk I/O, read garbage and don't flush to disk\n"
@@ -1201,6 +1206,8 @@ int main(int argc, char* argv[])
 	settings_pack settings;
 	settings.set_int(settings_pack::cache_size, cache_size);
 	settings.set_int(settings_pack::choking_algorithm, settings_pack::rate_based_choker);
+	settings.set_bool(settings_pack::enable_nsw, true);
+
 
 	int refresh_delay = 500;
 	bool rate_limit_locals = false;
@@ -1336,6 +1343,21 @@ int main(int argc, char* argv[])
 					rate_limit_locals = true;
 					break;
 				}
+			case 'g':
+				{
+					--i;
+					settings.set_bool(settings_pack::enable_gateway_mode,true);
+					break;
+				}
+			case 'p':
+				{
+					std::string interface("127.0.0.1:");
+					interface += arg;
+					std::string current_eth = settings.get_str(settings_pack::listen_interfaces);
+					current_eth = current_eth + "," + interface;
+					settings.set_str(settings_pack::listen_interfaces,interface.c_str());
+					break;
+				}
 			case '0': disable_storage = true; --i;
 		}
 		++i; // skip the argument
@@ -1361,6 +1383,8 @@ int main(int argc, char* argv[])
 		+ alert::peer_log_notification
 		+ alert::dht_log_notification
 		+ alert::picker_log_notification
+		+ alert::nsw_notification
+		+ alert::nsw_log_notification
 		));
 
 	libtorrent::session ses(settings);
@@ -1394,6 +1418,19 @@ int main(int argc, char* argv[])
 		if (bdecode(&in[0], &in[0] + in.size(), e, ec) == 0)
 			ses.load_state(e, session::save_dht_state);
 	}
+#endif
+
+#ifndef TORRENT_DISABLE_NSW
+	nsw_settings nsw;
+	ses.set_nsw_settings(nsw);
+
+	// std::vector<char> in;
+	// if (load_file(".ses_state", in, ec) == 0)
+	// {
+	// 	bdecode_node e;
+	// 	if (bdecode(&in[0], &in[0] + in.size(), e, ec) == 0)
+	// 		ses.load_state(e, session::save_dht_state);
+	// }
 #endif
 
 	for (auto const& magnet : magnet_links)
