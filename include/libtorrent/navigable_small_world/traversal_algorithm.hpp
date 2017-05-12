@@ -3,8 +3,8 @@
 
 #include <vector>
 #include <map>
-#include <set>
-//#include <memory>
+//#include <set>
+
 
 #include "libtorrent/navigable_small_world/node_id.hpp"
 #include "libtorrent/navigable_small_world/nsw_routing_table.hpp"
@@ -26,7 +26,7 @@ struct TORRENT_EXTRA_EXPORT traversal_algorithm : boost::noncopyable
 {
 private:
 	node_id const m_nid;
-	std::string const m_target;
+	vector_t const m_target;
 
 
 	std::int16_t m_invoke_count = 0;
@@ -61,16 +61,16 @@ public:
 	virtual char const* name() const;
 	virtual void start();
 
-	std::string const& target() const { return m_target; }
+	vector_t const& target() const { return m_target; }
 	node_id const& target_nid() const { return m_nid; }
 
 	void resort_results();
 	void add_entry(node_id const& id
-				, std::string descr
+				, vector_t const& descr
 				, udp::endpoint const& addr
 				, unsigned char flags);
 
-	traversal_algorithm(node& nsw_node, node_id const& id, std::string const& target_string);
+	traversal_algorithm(node& nsw_node, node_id const& id, vector_t const& target_string);
 	int invoke_count() const { TORRENT_ASSERT(m_invoke_count >= 0); return m_invoke_count; }
 	int branch_factor() const { TORRENT_ASSERT(m_max_threads >= 0); return m_max_threads; }
 
@@ -94,7 +94,7 @@ protected:
 
 	virtual observer_ptr new_observer(udp::endpoint const& ep
 		, node_id const& id
-		, std::string const& descr);
+		, vector_t const& descr);
 
 	virtual bool invoke(observer_ptr) { return false; }
 
@@ -107,7 +107,7 @@ class traversal_observer : public observer_interface
 public:
 	traversal_observer(
 		std::shared_ptr<traversal_algorithm> const& algorithm
-		, udp::endpoint const& ep, node_id const& id, std::string const& text)
+		, udp::endpoint const& ep, node_id const& id, vector_t const& text)
 		: observer_interface(algorithm, ep, id, text)
 	{}
 

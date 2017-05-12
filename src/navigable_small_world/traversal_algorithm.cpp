@@ -25,7 +25,7 @@ bool is_sorted(It b, It e, Cmp cmp)
 
 observer_ptr traversal_algorithm::new_observer(udp::endpoint const& ep
 	, node_id const& id
-	, std::string const& descr)
+	, vector_t const& descr)
 {
 	auto o = m_node.m_rpc.allocate_observer<null_observer>(self(), ep, id, descr);
 	return o;
@@ -34,18 +34,18 @@ observer_ptr traversal_algorithm::new_observer(udp::endpoint const& ep
 traversal_algorithm::traversal_algorithm(
 	node& nsw_node
 	, node_id const& id
-	, std::string const& target_string)
+	, vector_t const& target_string)
 	: m_node(nsw_node)
-	, m_nid(id)
+	, m_nid(nsw_node.nid())
 	, m_target(target_string)
 {
 #ifndef TORRENT_DISABLE_LOGGING
 	m_id = m_node.search_id();
 	nsw_logger_observer_interface* logger = get_node().observer();
 	if (logger != nullptr && logger->should_log(nsw_logger_interface::traversal))
-	{
-		logger->nsw_log(nsw_logger_interface::traversal, "[%u] NEW target: %s k: %d"
-			, m_id, target_string.c_str(), m_node.m_table.neighbourhood_size());
+	{ // provoke corruption. check %u
+		// logger->nsw_log(nsw_logger_interface::traversal, "[%u] NEW target: %s k: %d"
+		// 	, m_id, term_vector::vectorToString(target_string).c_str(), m_node.m_table.neighbourhood_size());
 	}
 #endif
 }
@@ -54,12 +54,12 @@ void traversal_algorithm::resort_results()
 {
 	std::sort(m_results.begin(), m_results.end()
 		, [this](observer_ptr const& lhs, observer_ptr const& rhs)
-		{ return term_vector::getSimilarity(lhs->descr(),m_node.descr()) >
-					term_vector::getSimilarity(rhs->descr(),m_node.descr()); });
+		{ return term_vector::getVecSimilarity(lhs->descr(),m_node.m_table.get_descr()) >
+					term_vector::getVecSimilarity(rhs->descr(),m_node.m_table.get_descr()); });
 }
 
 void traversal_algorithm::add_entry(node_id const& id
-								, std::string description
+								, vector_t const& description
 								, udp::endpoint const& addr
 								, unsigned char const flags)
 {
@@ -77,11 +77,11 @@ void traversal_algorithm::add_entry(node_id const& id
 		done();
 		return;
 	}
-	if (id.is_all_zeros())
-	{
-		o->set_id(generate_random_id());
-		o->flags |= observer_interface::flag_no_id;
-	}
+	// if (id.is_all_zeros())
+	// {
+	// 	o->set_id(generate_random_id());
+	// 	o->flags |= observer_interface::flag_no_id;
+	// }
 
 	o->flags |= flags;
 
@@ -94,8 +94,8 @@ void traversal_algorithm::add_entry(node_id const& id
 	// 	{ return compare_ref(lhs->id(), rhs->id(), m_target); });
 	auto iter = std::find_if(m_results.begin(), m_results.end()
 				, [this,&description](observer_ptr const& lhs)
-				{ return term_vector::getSimilarity(lhs->descr(),m_node.descr()) <
-					term_vector::getSimilarity(description,m_node.descr()); });
+				{ return term_vector::getVecSimilarity(lhs->descr(),m_node.m_table.get_descr()) <
+					term_vector::getVecSimilarity(description,m_node.m_table.get_descr()); });
 
 	if (iter == m_results.end() || (*iter)->id() != id) /// check text description?
 	{
@@ -154,9 +154,9 @@ void traversal_algorithm::add_entry(node_id const& id
 				, m_invoke_count, name());
 		}
 #endif
-		++iter;
-		iter = m_results.insert(iter, o);
-
+		// --iter;
+		// iter = m_results.insert(iter, o);
+		m_results.push_back(o);
 		// TORRENT_ASSERT(libtorrent::dht::is_sorted(m_results.begin(), m_results.end()
 		// 	, [this](observer_ptr const& lhs, observer_ptr const& rhs)
 		// 	{ return compare_ref(lhs->id(), rhs->id(), m_target); }));
@@ -438,7 +438,7 @@ void traversal_algorithm::add_gate_entries()
 	}
 #endif
 	for (auto const& n : m_node.m_table)
-		add_entry(node_id(), n.second, n.first, observer_interface::flag_initial);
+		add_entry(node_id(0), n.first, n.second, observer_interface::flag_initial);
 }
 
 void traversal_algorithm::init()
@@ -461,7 +461,7 @@ void traversal_algorithm::status(nsw_lookup& l)
 	l.type = name();
 	//l.nodes_left = 0;
 	//l.first_timeout = 0;
-	l.target = m_target;
+	//l.target = m_target;
 }
 
 void traversal_observer::reply(msg const& m)

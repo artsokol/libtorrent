@@ -7,7 +7,9 @@
 #include "libtorrent/union_endpoint.hpp"
 #include "libtorrent/time.hpp" // for time_point
 
+#include "libtorrent/navigable_small_world/term_vector.hpp"
 #include <string>
+#include <unordered_map>
 
 namespace libtorrent { namespace nsw
 {
@@ -18,11 +20,11 @@ namespace libtorrent { namespace nsw
 
 struct TORRENT_EXTRA_EXPORT node_entry
 {
-    node_entry(node_id const& id_,
-        udp::endpoint const& ep,
-        int roundtriptime = ~0,
-        bool pinged = false,
-        std::string const& description = "");
+    node_entry(node_id const& id_
+            , udp::endpoint const& ep
+            , vector_t const& descr
+            , int roundtriptime = ~0
+            , bool pinged = false);
 
     explicit node_entry(udp::endpoint const& ep);
     node_entry();
@@ -31,7 +33,7 @@ struct TORRENT_EXTRA_EXPORT node_entry
 
     bool pinged() const { return timeout_count != ~0; }
     void set_pinged() { if (timeout_count == ~0) timeout_count = 0; }
-    void timed_out() { if (pinged() && timeout_count < 0xfe) ++timeout_count; }
+    void timed_out() const { if (pinged() && timeout_count < 0xfe) ++timeout_count; }
     int fail_count() const { return pinged() ? timeout_count : 0; }
     void reset_fail_count() { if (pinged()) timeout_count = 0; }
 
@@ -46,21 +48,27 @@ struct TORRENT_EXTRA_EXPORT node_entry
 
 	node_id id;
 
-    //i think it makes sence to keep term vector of all friends
-    std::string term_vector;
+    std::unordered_map<std::string, double> term_vector;
 
     union_endpoint endpoint;
 
     // the average RTT of this node
-	std::uint16_t rtt;
+	mutable std::uint16_t rtt;
 
     // the number of times this node has failed to
     // respond in a row
-	std::uint8_t timeout_count;
+	mutable std::uint8_t timeout_count;
 
     #ifndef TORRENT_DISABLE_LOGGING
     time_point first_seen;
     #endif
+
+
+    bool operator==(node_entry const& a) {
+        if (term_vector::getVecSimilarity(a.term_vector,this->term_vector) == 1)
+            return true;
+        return false;
+    }
 };
 
 } }

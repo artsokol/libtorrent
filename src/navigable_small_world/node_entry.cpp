@@ -5,13 +5,15 @@ namespace libtorrent {
 namespace nsw
 {
 
-	node_entry::node_entry(node_id const& id_, udp::endpoint const& ep
-		, int roundtriptime
-		, bool pinged
-		, std::string const& description)
+	node_entry::node_entry(node_id const& id_
+					, udp::endpoint const& ep
+					, std::unordered_map<std::string, double> const& vector
+					, int roundtriptime
+					, bool pinged
+		)
 		: last_queried(pinged ? aux::time_now() : min_time())
 		, id(id_)
-		, term_vector(description)
+		, term_vector(vector)
 		, endpoint(ep)
 		, rtt(roundtriptime & ~0)
 		, timeout_count(pinged ? 0 : ~0)
@@ -23,7 +25,7 @@ namespace nsw
 	node_entry::node_entry(udp::endpoint const& ep)
 		: last_queried(min_time())
 		, id(nullptr)
-		, term_vector("")
+		, term_vector()
 		, endpoint(ep)
 		, rtt(~0)
 		, timeout_count(~0)
@@ -35,7 +37,7 @@ namespace nsw
 	node_entry::node_entry()
 		: last_queried(min_time())
 		, id(nullptr)
-		, term_vector("")
+		, term_vector()
 		, rtt(~0)
 		, timeout_count(~0)
 #ifndef TORRENT_DISABLE_LOGGING

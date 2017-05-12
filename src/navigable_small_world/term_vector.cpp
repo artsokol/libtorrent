@@ -428,4 +428,25 @@ entry& term_vector::vectorToEntry(const vector_t& termVector, entry& a)
   return a;
 }
 
+
+
+
+vector_t& term_vector::bencodeToVector(bdecode_node const& encode_vec, vector_t& out)
+{
+    for (int i = 0; i < encode_vec.dict_size(); ++i)
+    {
+
+        std::pair<string_view, bdecode_node> elem = encode_vec.dict_at(i);
+
+        int received_num = elem.second.int_value();
+        int digits = msg::count_digits(received_num);
+        double value = (digits != 0)?
+                            received_num/std::pow(10, digits):
+                            0.0;
+        out[elem.first.to_string()] = value;
+    }
+
+    return out;
+}
+
 }}

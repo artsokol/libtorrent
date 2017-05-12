@@ -77,10 +77,11 @@ void observer_interface::set_id(node_id const& id)
 //    if (m_algorithm) m_algorithm->resort_results();
 }
 
-void observer_interface::set_descr(std::string const& descr)
+void observer_interface::set_descr(vector_t const& descr)
 {
-    if (m_description == descr) return;
+    if (term_vector::getVecSimilarity(m_description,descr) == 1) return;
     m_description = descr;
+
     if (m_algorithm) m_algorithm->resort_results();
 }
 

@@ -25,10 +25,10 @@ namespace libtorrent { namespace nsw {
 
 using observer_storage = std::aligned_union<1
 	, find_data_observer
-//	, get_item_observer
-//	, get_peers_observer
-  , traversal_observer
-	,null_observer>::type;
+	, add_friend_observer
+//	, get_friends_observer
+    , traversal_observer
+	, null_observer>::type;
 
 rpc_manager::rpc_manager(node_id const& our_id
 	, nsw_settings const& settings
@@ -201,7 +201,7 @@ bool rpc_manager::incoming(msg const& m, node_id* id)
 		return false;
 	}
 
-	bdecode_node node_id_ent = ret_ent.dict_find_string("id");
+	bdecode_node node_id_ent = ret_ent.dict_find_string("q_id");
 	if (!node_id_ent || node_id_ent.string_length() != 20)
 	{
 		o->timeout();
@@ -232,7 +232,8 @@ bool rpc_manager::incoming(msg const& m, node_id* id)
 
 	// we found an observer for this reply, hence the node is not spoofing
 	// add it to the routing table
-	return m_table.node_seen(*id, m.addr, rtt);
+	return true;
+//	return m_table.node_seen(*id, m.addr, rtt);
 }
 
 time_duration rpc_manager::tick()
@@ -298,13 +299,13 @@ time_duration rpc_manager::tick()
 	return (std::max)(ret, duration_cast<time_duration>(milliseconds(200)));
 }
 
-inline void rpc_manager::add_our_id(entry& e)
+void rpc_manager::add_our_id(entry& e)
 {
-	e["id"] = m_our_id.to_string();
+	e["q_id"] = m_our_id.to_string();
 }
 
 bool rpc_manager::invoke(entry& e, udp::endpoint target_addr
-	, observer_ptr o)
+	, observer_ptr o, std::string& out_transaction)
 {
 
 	if (m_destructing) return false;
@@ -319,6 +320,7 @@ bool rpc_manager::invoke(entry& e, udp::endpoint target_addr
 	std::uint16_t const tid = std::uint16_t(random(~0));
 	detail::write_uint16(tid, out);
 	e["t"] = transaction_id;
+	out_transaction = transaction_id;
 
 
 	node& n = o->algorithm()->get_node();

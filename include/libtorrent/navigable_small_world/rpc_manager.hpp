@@ -32,7 +32,7 @@ public:
 	null_observer(std::shared_ptr<traversal_algorithm> const& a
 		, udp::endpoint const& ep
 		, node_id const& id
-		, std::string const& text): observer_interface(a, ep, id, text) {}
+		, vector_t const& text): observer_interface(a, ep, id, text) {}
 	virtual void reply(msg const&) { flags |= flag_done; }
 };
 
@@ -55,7 +55,7 @@ public:
 	time_duration tick();
 
 	bool invoke(entry& e, udp::endpoint target
-		, observer_ptr o);
+		, observer_ptr o, std::string& out_transaction);
 
 	void add_our_id(entry& e);
 
@@ -75,6 +75,13 @@ public:
 
 	int num_allocated_observers() const { return m_allocated_observers; }
 	void update_node_id(node_id const& id) { m_our_id = id; }
+	// int get_my_transaction_id(observer_ptr o)
+	// {
+	// 	auto it = std::find_if(m_transactions.begin(),m_transactions.end(),[&o](std::pair<int, observer_ptr> item)
+	// 																{return item.second == o;});
+
+	// 	return (it != m_transactions.end())?it->first:0;
+	// };
 // #if TORRENT_USE_ASSERTS
 // 	size_t allocation_size() const;
 // #endif

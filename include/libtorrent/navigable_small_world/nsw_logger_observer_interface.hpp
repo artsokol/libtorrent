@@ -51,6 +51,9 @@ namespace libtorrent { namespace nsw
 		virtual void get_friends(sha1_hash const& ih, std::string const& target_text) = 0;
 		virtual void outgoing_get_friends(sha1_hash const& target
 			, std::string const& target_text, udp::endpoint const& ep) = 0;
+		virtual bool on_nsw_request(string_view query
+			, nsw::msg const& request, entry& response) = 0;
+
 		//virtual void announce(sha1_hash const& ih, address const& addr, int port) = 0;
 //		virtual bool on_add_friend_request(string_view query
 //			, nsw::msg const& request, entry& response) = 0;

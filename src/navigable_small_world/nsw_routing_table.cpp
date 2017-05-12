@@ -33,25 +33,25 @@ namespace
 }
 
 
+
 routing_table::routing_table(node_id const& id, udp proto, int neighbourhood_size
 	, nsw_settings const& settings
 	, std::string const& node_description
 	, nsw_logger_interface* log)
-	: m_neighbourhood_size(neighbourhood_size)
-	, m_equal_text_max_nodes(5)
+	: m_equal_text_max_nodes(5)
 	, m_settings(settings)
-	, m_description(node_description)
 	, m_id(id)
 	, m_protocol(proto)
 	, m_last_self_refresh(min_time())
 //	, m_ips(0)
-	, m_close_nodes_rt(neighbourhood_size)
-	, m_far_nodes_rt(neighbourhood_size)
-	, m_replacement_nodes(m_description)
+	, m_close_nodes_rt()
+	, m_far_nodes_rt()
+	, m_replacement_nodes(m_description_vec)
 #ifndef TORRENT_DISABLE_LOGGING
 	, m_log(log)
 #endif
 {
+	m_description_vec = term_vector::makeTermVector(node_description,m_description_vec);
 //	TORRENT_UNUSED(log);
 }
 
@@ -82,7 +82,7 @@ std::tuple<size_t, size_t, size_t> routing_table::size() const
 }
 
 // concerns about goals !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-node_entry const* routing_table::next_refresh()
+node_entry const* routing_table::next_for_refresh()
 {
 	node_entry* candidate = nullptr;
 
@@ -148,24 +148,29 @@ node_entry* routing_table::find_node(udp::endpoint const& ep
 
 	// fills the vector with the k nodes from our storage that
 	// are nearest to the given text.
-void routing_table::find_node(std::string const& target_string
+void routing_table::find_node(vector_t const& target_string
 								, std::vector<node_entry>& l
 								, int count)
 {
 	if (count < 1)
 		return;
 
-	l.insert(l.end(),m_close_nodes_rt.begin(),m_close_nodes_rt.end());
-	l.insert(l.end(),m_far_nodes_rt.begin(),m_far_nodes_rt.end());
+	if(!m_close_nodes_rt.empty())
+		l.insert(l.end(),m_close_nodes_rt.begin(),m_close_nodes_rt.end());
+	if(!m_far_nodes_rt.empty())
+		l.insert(l.end(),m_far_nodes_rt.begin(),m_far_nodes_rt.end());
+
+	if(l.empty())
+		return;
 
 	sort(l.begin(), l.end(),
 			[&target_string](node_entry const& a,node_entry const& b) -> bool
 					{
-						return term_vector::getSimilarity(a.term_vector,target_string) >
-									term_vector::getSimilarity(b.term_vector,target_string);
+						return term_vector::getVecSimilarity(a.term_vector,target_string) >
+									term_vector::getVecSimilarity(b.term_vector,target_string);
 					});
-
-	l.resize(count);
+	if(l.size() > count)
+		l.resize(count);
 }
 
 void routing_table::remove_node(node_entry* n, routing_table_t& rt)
@@ -178,19 +183,19 @@ void routing_table::remove_node(node_entry* n, routing_table_t& rt)
 		rt.erase(rt.begin() + idx);
 
 		std::pair <replacement_table_t::iterator,replacement_table_t::iterator> ret;
-		ret = m_replacement_nodes.equal_range(n->term_vector);
+		ret = m_replacement_nodes.equal_range(*n);
 		m_replacement_nodes.erase(ret.first,ret.second);
 	}
 }
 
-bool routing_table::add_node(node_entry const& e)
+bool routing_table::add_friend(node_entry const& e)
 {
-	add_node_status_t s = add_node_impl(e);
+	add_node_status_t s = add_friend_impl(e);
 	if (s == failed_to_add) return false;
 	else if(s == node_added) return true;
 }
 
-routing_table::add_node_status_t routing_table::add_node_impl(node_entry e)
+routing_table::add_node_status_t routing_table::add_friend_impl(node_entry e)
 {
 	int index = -1;
 	routing_table_t::iterator j;
@@ -201,6 +206,10 @@ routing_table::add_node_status_t routing_table::add_node_impl(node_entry e)
 
 	// don't add ourself
 	if (e.id == m_id) return failed_to_add;
+
+	// this is first item
+	if(m_close_nodes_rt.empty())
+		return insert_node(e);
 
 	// check if we already have this node
 	node_entry* existing = find_node(e.endpoint, table_type, index);
@@ -224,9 +233,10 @@ routing_table::add_node_status_t routing_table::add_node_impl(node_entry e)
 		}
 
 	}
+	//TODO: add checking of size for m_close_nodes_rt
 
-	if( term_vector::getSimilarity(m_close_nodes_rt.back().term_vector,m_description) >
-		term_vector::getSimilarity(e.term_vector,m_description))
+	if( term_vector::getVecSimilarity(m_close_nodes_rt.back().term_vector,m_description_vec) >
+		term_vector::getVecSimilarity(e.term_vector,m_description_vec))
 	{
 		// in common we should not include this node in our friend list
 		// but there ase several cases when it can be useful. Let's check
@@ -241,8 +251,12 @@ routing_table::add_node_status_t routing_table::add_node_impl(node_entry e)
 		// as the last replacement strategy, if the node we found matching our
 		// bit prefix has higher RTT than the new node, replace it.
 
+		// std::find_if(m_replacement_nodes.begin(),m_replacement_nodes.end(),
+		// 												[](node_entry const& e)
+		// 													{ return ne.pinged() == false;)
+
 		if (e.pinged() && e.fail_count() == 0
-			&& m_replacement_nodes.find(e.term_vector) == m_replacement_nodes.end())
+			&& m_replacement_nodes.find(e) == m_replacement_nodes.end())
 		{
 			// if the node we're trying to insert is considered pinged,
 			// we may replace other nodes that aren't pinged
@@ -259,8 +273,8 @@ routing_table::add_node_status_t routing_table::add_node_impl(node_entry e)
 				sort(m_close_nodes_rt.begin(), m_close_nodes_rt.end(),
 					[&e](node_entry const& a,node_entry const& b) -> bool
 					{
-						return term_vector::getSimilarity(a.term_vector,e.term_vector) >
-									term_vector::getSimilarity(b.term_vector,e.term_vector);
+						return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
+									term_vector::getVecSimilarity(b.term_vector,e.term_vector);
 					});
 
 #ifndef TORRENT_DISABLE_LOGGING
@@ -318,7 +332,7 @@ routing_table::add_node_status_t routing_table::add_node_impl(node_entry e)
 	{
 		// replacement cache inserting
 		// but we say fsiled as it is not included in close list
-		m_replacement_nodes.emplace(e.term_vector,e);
+		m_replacement_nodes.emplace(e);
 	}
 	return failed_to_add;
 }
@@ -339,8 +353,8 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 		sort(m_close_nodes_rt.begin(), m_close_nodes_rt.end(),
 					[&e](node_entry const& a,node_entry const& b) -> bool
 					{
-						return term_vector::getSimilarity(a.term_vector,e.term_vector) >
-										term_vector::getSimilarity(b.term_vector,e.term_vector);
+						return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
+										term_vector::getVecSimilarity(b.term_vector,e.term_vector);
 					});
 #ifndef TORRENT_DISABLE_LOGGING
 		log_node_added(e);
@@ -354,23 +368,30 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 	}
 
 	//node_entry& last_in_closest = m_close_nodes_rt.back();
-	m_far_nodes_rt.push_back(m_close_nodes_rt.back());
-	m_close_nodes_rt.pop_back();
+	if (m_close_nodes_rt.size()>m_neighbourhood_size)
+	{
+		m_far_nodes_rt.push_back(m_close_nodes_rt.back());
+		m_close_nodes_rt.pop_back();
+	}
 	m_close_nodes_rt.push_back(e);
+
 
 	sort(m_close_nodes_rt.begin(), m_close_nodes_rt.end(),
 				[&e](node_entry const& a,node_entry const& b) -> bool
 				{
-					return term_vector::getSimilarity(a.term_vector,e.term_vector) >
-										term_vector::getSimilarity(b.term_vector,e.term_vector);
+					return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
+										term_vector::getVecSimilarity(b.term_vector,e.term_vector);
 				});
 
-	sort(m_far_nodes_rt.begin(), m_close_nodes_rt.end(),
-				[&e](node_entry const& a,node_entry const& b) -> bool
-				{
-					return term_vector::getSimilarity(a.term_vector,e.term_vector) >
-										term_vector::getSimilarity(b.term_vector,e.term_vector);
-				});
+	if (!m_far_nodes_rt.empty())
+	{
+		sort(m_far_nodes_rt.begin(), m_close_nodes_rt.end(),
+					[&e](node_entry const& a,node_entry const& b) -> bool
+					{
+						return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
+											term_vector::getVecSimilarity(b.term_vector,e.term_vector);
+					});
+	}
 
 #ifndef TORRENT_DISABLE_LOGGING
 	log_node_added(e);
@@ -384,7 +405,11 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 void routing_table::update_node_id(node_id const& id)
 {
 	m_id = id;
+}
 
+//TODO
+void routing_table::update_description()
+{
 	// pull all nodes out of the routing table, effectively emptying it
 	routing_table_t old_close_nodes;
 	routing_table_t old_far_nodes;
@@ -395,11 +420,11 @@ void routing_table::update_node_id(node_id const& id)
 	// then add them all back. First add the main nodes, then the replacement
 	// nodes
 	for (auto const& n : old_close_nodes)
-		add_node(n);
+		add_friend(n);
 
 	// now add back the replacement nodes
 	for (auto const& n : old_far_nodes)
-		add_node(n);
+		add_friend(n);
 }
 
 void routing_table::for_each_node(
@@ -420,24 +445,27 @@ void routing_table::for_each_node(
 	}
 }
 
+//try to save our time and find node in our cache
 bool routing_table::fill_from_replacements(node_entry& ne)
 {
 	std::pair <replacement_table_t::iterator,replacement_table_t::iterator> ret;
-	ret = m_replacement_nodes.equal_range(ne.term_vector);
+	ret = m_replacement_nodes.equal_range(ne);
 
 	if(ret.first != ret.second)
 	{
+		//nodes for replacement found
 		routing_table_t tmp_rt;
 
 		for (replacement_table_t::iterator it=ret.first;
 		 							it!=ret.second;
 		 							++it)
 		{
-			tmp_rt.push_back(it->second);
-			std::sort(tmp_rt.begin(), tmp_rt.end()
-					, [](node_entry const& lhs, node_entry const& rhs)
-						{ return lhs.rtt < rhs.rtt; });
+			tmp_rt.push_back(*it);
 		}
+
+		std::sort(tmp_rt.begin(), tmp_rt.end()
+				, [](node_entry const& lhs, node_entry const& rhs)
+					{ return lhs.rtt < rhs.rtt; });
 
 		//remove_node(&ne,m_close_nodes_rt);
 		ne = tmp_rt.front();
@@ -446,8 +474,8 @@ bool routing_table::fill_from_replacements(node_entry& ne)
 		//remove from cache;
 		replacement_table_t::iterator point_to_remove = std::find_if(ret.first
 														, ret.second
-												, [&ne](const replacement_table_t::value_type& map_item)
-												{ return map_item.second.id == ne.id; });
+												, [&ne](const replacement_table_t::value_type& table_item)
+												{ return table_item.id == ne.id; });
 
 		m_replacement_nodes.erase(point_to_remove);
 
@@ -468,7 +496,7 @@ void routing_table::node_failed(node_id const& nid, udp::endpoint const& ep)
 
 	if (j == m_close_nodes_rt.end())
 	{
-		node_entry* found_node = nullptr;
+		const node_entry* found_node = nullptr;
 		replacement_table_t::iterator k;
 
 		j = std::find_if(m_far_nodes_rt.begin()
@@ -482,13 +510,13 @@ void routing_table::node_failed(node_id const& nid, udp::endpoint const& ep)
 			// let's check replacemet list
 			k = std::find_if(m_replacement_nodes.begin()
 							, m_replacement_nodes.end()
-							, [&nid](const replacement_table_t::value_type& map_item)
-							{ return map_item.second.id == nid; });
+							, [&nid](const replacement_table_t::value_type& table_item)
+							{ return table_item.id == nid; });
 
 			if (k == m_replacement_nodes.end())
 				return;
 			else
-				found_node	= &(k->second);
+				found_node	= &*k;
 		}
 		else
 			found_node = &*j;
@@ -548,14 +576,18 @@ void routing_table::node_failed(node_id const& nid, udp::endpoint const& ep)
 
 }
 
-void routing_table::add_gate_node(udp::endpoint const& router, std::string const& description)
+void routing_table::add_gate_node(udp::endpoint const& router, vector_t const& description)
 {
-	m_gate_nodes.insert(std::make_pair(router,description));
+	auto existed_gate = std::find_if(m_gate_nodes.begin(),m_gate_nodes.end(),[&description]
+														(std::pair<vector_t, udp::endpoint> const& item)
+														{ return term_vector::getVecSimilarity(description,item.first) == 1;});
+	if (existed_gate == m_gate_nodes.end())
+		m_gate_nodes.push_back(std::make_pair(description, router));
 }
 
-bool routing_table::node_seen(node_id const& id, udp::endpoint const& ep, int rtt)
+bool routing_table::node_seen(node_id const& id, vector_t const& vector, udp::endpoint const& ep, int rtt)
 {
- 	return verify_node_address(m_settings, id, ep.address()) && add_node(node_entry(id, ep, rtt, true));
+ 	return verify_node_address(m_settings, id, ep.address()) && add_friend(node_entry(id, ep, vector, rtt, true));
 }
 
 bool routing_table::is_full() const
@@ -590,11 +622,11 @@ void routing_table::log_node_added(node_entry const& ne) const
 	if (m_log != nullptr && m_log->should_log(nsw_logger_interface::routing_table))
 	{
 		m_log->nsw_log(nsw_logger_interface::routing_table, "NODE ADDED id: %s \
-														up-time: %d\n \
+														up-time: %d\n"// \
 														description %s"
 			, aux::to_hex(ne.id).c_str()
-			, int(total_seconds(aux::time_now() - ne.first_seen))
-			, ne.term_vector.c_str());
+			, int(total_seconds(aux::time_now() - ne.first_seen)));
+			//, ne.term_vector.c_str());
 	}
 }
 #endif
@@ -634,15 +666,18 @@ void routing_table::log_node_added(node_entry const& ne) const
 
 // }
 
-// void routing_table::heard_about(node_id const& id, udp::endpoint const& ep)
-// {
-// 	if (!verify_node_address(m_settings, id, ep.address()))
-// 		return;
-// 	add_node(node_entry(id, ep));
-// }
-// void routing_table::find_node(node_id const& target
-// 	, std::vector<node_entry>& l, int const options, int count)
-// {
+void routing_table::heard_about(node_id const& id, udp::endpoint const& ep)
+{
+	int index = -1;
+	routing_table::table_type_t table_type = routing_table::none;
 
-// }
+	// check if we already have this node
+	node_entry* existing = find_node(ep, table_type, index);
+
+	if(existing && existing->id == id)
+		existing->last_queried  = aux::time_now();
+
+	return;
+}
+
 } } // namespace libtorrent::nsw

@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "libtorrent/navigable_small_world/node_id.hpp"
+#include "libtorrent/navigable_small_world/term_vector.hpp"
 #include "libtorrent/navigable_small_world/msg.hpp"
 #include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
 #include "libtorrent/time.hpp"
@@ -27,7 +28,8 @@ private:
 	const std::shared_ptr<traversal_algorithm> m_algorithm;
 
 	node_id m_id;
-	std::string m_description;
+
+	vector_t m_description;
 	union addr_t
 	{
 #if TORRENT_USE_IPV6
@@ -45,7 +47,7 @@ protected:
 
 public:
 	observer_interface(std::shared_ptr<traversal_algorithm> const& a
-		, udp::endpoint const& ep, node_id const& id, std::string const& text)
+		, udp::endpoint const& ep, node_id const& id, vector_t const& text)
 		: m_sent()
 		, m_algorithm(a)
 		, m_id(id)
@@ -95,8 +97,8 @@ public:
 	void set_id(node_id const& id);
 	node_id const& id() const { return m_id; }
 
-	void set_descr(std::string const& text);
-	std::string const& descr() const { return m_description; }
+	void set_descr(vector_t const& text);
+	vector_t const& descr() const { return m_description; }
 
 	void set_transaction_id(std::uint16_t tid)
 	{ m_transaction_id = tid; }

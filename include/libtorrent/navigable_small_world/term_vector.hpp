@@ -11,7 +11,7 @@
 #include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
 #include "libtorrent/entry.hpp"
 #include "libtorrent/sha1_hash.hpp"
-
+#include "libtorrent/bdecode.hpp"
 namespace libtorrent {
 namespace nsw
 {
@@ -39,6 +39,7 @@ public:
     static std::string vectorToString(const vector_t& termVector);
 
     static entry& vectorToEntry(const vector_t& termVector, entry& a);
+    static vector_t& bencodeToVector(const bdecode_node&, vector_t& out);
 private:
 
     static void alignVectors(wvector_t& tv1, wvector_t& tv2);
