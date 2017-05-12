@@ -25,7 +25,7 @@ namespace libtorrent { namespace nsw {
 	time_duration const key_refresh
 		= duration_cast<time_duration>(minutes(15));
 	time_duration const ping_send_timeout
-		= duration_cast<time_duration>(seconds(5));
+		= duration_cast<time_duration>(seconds(15));
 	// void add_nsw_counters(node const& nsw, counters& c)
 	// {
 	// 	int nodes, replacements, allocated_observers;
@@ -81,9 +81,9 @@ namespace libtorrent { namespace nsw {
 
 	void nsw_tracker::update_node_id()
 	{
-		for_each(m_nodes.begin(),m_nodes.end(),[]
-								(node_collection_t::value_type& table_item)
-								{ table_item.second.get()->update_node_id(); });
+		// for_each(m_nodes.begin(),m_nodes.end(),[]
+		// 						(node_collection_t::value_type& table_item)
+		// 						{ table_item.second.get()->update_node_id(); });
 //		item.update_node_id();
 //		update_storage_node_ids();
 	}
@@ -111,7 +111,7 @@ namespace libtorrent { namespace nsw {
 																							, std::ref(*table_item.second)
 																							, _1));
 											m_timers_vec.at(table_item.second.get()->nid())
-																		.get()->refresh_timer.expires_from_now(seconds(5), ec);
+																		.get()->refresh_timer.expires_from_now(ping_send_timeout, ec);
 											m_timers_vec.at(table_item.second.get()->nid())
 																		.get()->refresh_timer.async_wait(std::bind(&nsw_tracker::ping_timeout
 																											, self()
@@ -177,8 +177,12 @@ namespace libtorrent { namespace nsw {
 		n.tick();
 
 		error_code ec;
-		m_timers_vec.at(n.nid()).get()->refresh_timer.expires_from_now(ping_send_timeout, ec);
-		m_timers_vec.at(n.nid()).get()->refresh_timer.async_wait(
+		auto it = m_timers_vec.find(n.nid());
+
+		TORRENT_ASSERT(it != m_timers_vec.end());
+
+		it->second.get()->refresh_timer.expires_from_now(ping_send_timeout, ec);
+		it->second.get()->refresh_timer.async_wait(
 			std::bind(&nsw_tracker::ping_timeout, self(), std::ref(n), _1));
 	}
 
@@ -187,8 +191,11 @@ namespace libtorrent { namespace nsw {
 		if (e || m_status == aborted) return;
 
 		error_code ec;
-		m_timers_vec.at(n.nid()).get()->key_refresh_timer.expires_from_now(key_refresh, ec);
-		m_timers_vec.at(n.nid()).get()->key_refresh_timer.async_wait(std::bind(&nsw_tracker::refresh_key, self(), std::ref(n), _1));
+		auto it = m_timers_vec.find(n.nid());
+
+		TORRENT_ASSERT(it != m_timers_vec.end());
+		it->second.get()->key_refresh_timer.expires_from_now(key_refresh, ec);
+		it->second.get()->key_refresh_timer.async_wait(std::bind(&nsw_tracker::refresh_key, self(), std::ref(n), _1));
 
 		n.new_write_key();
 
@@ -203,7 +210,7 @@ namespace libtorrent { namespace nsw {
 
 	void nsw_tracker::get_friends(node& item, sha1_hash const& ih
 								, std::string const& target
-								, std::function<void(std::multimap<double, tcp::endpoint> const&)> f)
+								, std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const&)> f)
 	{
 		std::function<void(std::vector<std::pair<node_entry, std::string>> const&)> empty;
 		vector_t target_vec;
@@ -348,7 +355,7 @@ namespace libtorrent { namespace nsw {
 										,dynamic_cast<nsw_logger_observer_interface*>(m_log)
 										,m_counters));
 
-			nodeRef.get()->update_node_id();
+			//nodeRef.get()->update_node_id();
 			m_nodes[description] = nodeRef;
 
 			//pass gateway nodes
@@ -365,7 +372,7 @@ namespace libtorrent { namespace nsw {
 			{
 				error_code ec;
 				refresh_key(*(nodeRef), ec);
-				m_timers_vec.at(nodeRef->nid()).get()->connection_timer.expires_from_now(seconds(1), ec);
+				m_timers_vec.at(nodeRef->nid()).get()->connection_timer.expires_from_now(minutes(15), ec); //seconds(1)
 				m_timers_vec.at(nodeRef->nid()).get()->connection_timer.async_wait(
 							std::bind(&nsw_tracker::connection_timeout
 																, self()

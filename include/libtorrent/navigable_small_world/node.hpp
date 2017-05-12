@@ -11,11 +11,12 @@
 #include "libtorrent/navigable_small_world/rpc_manager.hpp"
 #include "libtorrent/navigable_small_world/node_id.hpp"
 #include "libtorrent/navigable_small_world/term_vector.hpp"
-
+#include "libtorrent/navigable_small_world/find_data.hpp"
 #include "libtorrent/socket.hpp"
 #include "libtorrent/string_view.hpp"
 #include "libtorrent/alert_types.hpp"
 
+using namespace std::placeholders;
 
 namespace libtorrent {
 	struct counters;
@@ -30,22 +31,26 @@ struct traversal_algorithm;
 struct nsw_logger_observer_interface;
 struct msg;
 
-TORRENT_EXTRA_EXPORT entry write_nodes_entry(std::vector<node_entry> const& nodes);
+TORRENT_EXTRA_EXPORT entry write_nodes_entry(std::vector<node_entry> const& nodes
+												, vector_t const& requested_vec
+												, entry& e);
 
-class announce_observer : public observer_interface
+class add_friend_observer : public observer_interface
 {
 public:
-	announce_observer(std::shared_ptr<traversal_algorithm> const& algo
-		, udp::endpoint const& ep, node_id const& id)
-		: observer_interface(algo, ep, id)
+	add_friend_observer(std::shared_ptr<traversal_algorithm> const& algo
+		, udp::endpoint const& ep
+		, node_id const& id
+		, vector_t const& text)
+		: observer_interface(algo, ep, id, text)
 	{}
 
-	void reply(msg const&) { flags |= flag_done; }
+	void reply(libtorrent::nsw::msg const&);// { flags |= flag_done; }
 };
 
 struct udp_socket_interface
 {
-	virtual bool has_quota() = 0;
+//	virtual bool has_quota() = 0;
 	virtual bool send_packet(entry& e, udp::endpoint const& addr) = 0;
 protected:
 	~udp_socket_interface() {}
@@ -53,42 +58,84 @@ protected:
 
 class TORRENT_EXTRA_EXPORT node : boost::noncopyable
 {
+
+private:
+
+	libtorrent::nsw_settings const& m_settings;
+
+	std::mutex m_mutex;
+
+	std::set<traversal_algorithm*> m_running_requests;
+
+	node_id m_id;
+	std::string m_description;
+
+	//usefull to have a precomputed vector
+	// create in routing table
+	//std::unordered_map<std::string, double> m_vector_description;
+public:
+	nsw::routing_table m_table;
+	rpc_manager m_rpc;
+
+private:
+
+	struct protocol_descriptor
+	{
+		udp protocol;
+		char const* family_name;
+		char const* nodes_key;
+	};
+
+	static protocol_descriptor const& map_protocol_to_descriptor(udp protocol);
+
+//	std::map<std::string, node*> const& m_nodes;
+
+	nsw_logger_observer_interface* m_observer;
+
+	protocol_descriptor const& m_protocol;
+
+	time_point m_last_tracker_tick;
+
+	time_point m_last_self_refresh;
+
+	int m_secret[2];
+
+	udp_socket_interface* m_sock;
+	counters& m_counters;
+
+
 public:
 	node(udp proto, udp_socket_interface* sock
 		, libtorrent::nsw_settings const& settings
 		, node_id const& nid
 		, const std::string& description
-		, nsw_logger_observer_interface* observer, counters& cnt
-		, std::map<std::string, node*> const& nodes);
-//		, nsw_storage_interface& storage);
+		, nsw_logger_observer_interface* observer, counters& cnt);
+//		, std::map<std::string, node*> const& nodes);
 
 	~node();
 
 	void update_node_id();
-
+	void update_node_description(std::string const& new_descr);
 	void tick();
-	void bootstrap(std::vector<udp::endpoint> const& nodes);
-	//void bootstrap(std::vector<udp::endpoint> const& nodes
-	//	, find_data::nodes_callback const& f);
-	void add_router_node(udp::endpoint const& router);
+	void bootstrap(/*std::vector<udp::endpoint> const& nodes,*/
+		find_data::nodes_callback const& f);
+
+	void add_gate_node(udp::endpoint const& router
+					, vector_t const& description);
 
 	void unreachable(udp::endpoint const& ep);
 	void incoming(msg const& m);
 
-#ifndef TORRENT_NO_DEPRECATE
-//	int num_torrents() const { return int(m_storage.num_torrents()); }
-//	int num_peers() const { return int(m_storage.num_peers()); }
-#endif
-
-	int bucket_size(int bucket);
+	//int bucket_size(int bucket);
 
 	node_id const& nid() const { return m_id; }
-
+	std::string const& descr() const { return m_description; }
+	vector_t const& descr_vec() const { return m_table.get_descr(); }
 #ifndef TORRENT_DISABLE_LOGGING
 	std::uint32_t search_id() { return m_search_id++; }
 #endif
 
-	//std::tuple<int, int, int> size() const { return m_table.size(); }
+	std::tuple<int, int, int> size() const { return m_table.size(); }
 
 
 
@@ -98,31 +145,33 @@ public:
 
 
 	enum flags_t { flag_seed = 1, flag_implied_port = 2 };
-	void get_peers(sha1_hash const& info_hash
-		, std::function<void(std::vector<tcp::endpoint> const&)> dcallback
-		, std::function<void(std::vector<std::pair<node_entry, std::string>> const&)> ncallback
-		, bool noseeds);
-	void announce(sha1_hash const& info_hash, int listen_port, int flags
+	void get_friends(sha1_hash const& info_hash
+		, vector_t const& target
+		, std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const&)> dcallback
+		, std::function<void(std::vector<std::pair<node_entry, std::string>> const&)> ncallback);
+	void add_friend(sha1_hash const& info_hash, int listen_port, int flags
 		, std::function<void(std::vector<tcp::endpoint> const&)> f);
 
-	void direct_request(udp::endpoint const& ep, entry& e
-		, std::function<void(msg const&)> f);
+	// void direct_request(udp::endpoint const& ep, entry& e
+	// 	, std::function<void(msg const&)> f);
 
 
 
 	bool verify_token(string_view token, sha1_hash const& info_hash
-	, udp::endpoint const& addr) const;
+	 , udp::endpoint const& addr) const;
 
-	std::string generate_token(udp::endpoint const& addr, sha1_hash const& info_hash);
+ 	std::string generate_token(udp::endpoint const& addr, sha1_hash const& info_hash);
 
 	time_duration connection_timeout();
 
 	void new_write_key();
 
-	void add_node(udp::endpoint const& node);
+	void add_node(udp::endpoint const& node, node_id const& id);
 	// to doublecheck!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// void replacement_cache(routing_table_t& nodes) const
 	// { m_table.replacement_cache(nodes); }
+
+	int get_search_threads() const { return m_settings.search_threads; }
 
 	void add_traversal_algorithm(traversal_algorithm* a)
 	{
@@ -146,9 +195,9 @@ public:
 
 	nsw_logger_observer_interface* observer() const { return m_observer; }
 
-	udp protocol() const { return m_protocol.protocol; }
-	char const* protocol_family_name() const { return m_protocol.family_name; }
-	char const* protocol_nodes_key() const { return m_protocol.nodes_key; }
+	udp get_protocol() const { return m_protocol.protocol; }
+	char const* get_protocol_family_name() const { return m_protocol.family_name; }
+	//char const* get_protocol_nodes_key() const { return m_protocol.nodes_key; }
 
 	bool native_address(udp::endpoint const& ep) const
 	{ return ep.protocol().family() == m_protocol.protocol.family(); }
@@ -161,56 +210,14 @@ public:
 	}
 
 private:
-
-	void send_single_refresh(udp::endpoint const& ep, int bucket
-		, node_id const& id = node_id());
-	bool lookup_peers(sha1_hash const& info_hash, entry& reply
-		, bool noseed, bool scrape, address const& requester) const;
-
-	libtorrent::nsw_settings const& m_settings;
-
-	std::mutex m_mutex;
-
-	std::set<traversal_algorithm*> m_running_requests;
-
+	void send_ping(udp::endpoint const& ep/*, int bucket*/
+		, node_id const& id);
+	void lookup_friends(sha1_hash const& info_hash
+		, vector_t const& target
+		, entry& reply
+		, address const& requester) const;
 	void incoming_request(msg const& h, entry& e);
-
-	void write_nodes_entries(sha1_hash const& info_hash
-		, bdecode_node const& want, entry& r);
-
-	node_id m_id;
-
-public:
-	nsw::routing_table m_table;
-	rpc_manager m_rpc;
-
-private:
-
-	struct protocol_descriptor
-	{
-		udp protocol;
-		char const* family_name;
-		char const* nodes_key;
-	};
-
-	static protocol_descriptor const& map_protocol_to_descriptor(udp protocol);
-
-	std::map<std::string, node*> const& m_nodes;
-
-	nsw_logger_observer_interface* m_observer;
-
-	protocol_descriptor const& m_protocol;
-
-	time_point m_last_tracker_tick;
-
-	time_point m_last_self_refresh;
-
-	int m_secret[2];
-
-	udp_socket_interface* m_sock;
-	counters& m_counters;
-
-//	nsw_storage_interface& m_storage;
+	void write_nodes_entries(bdecode_node const& want, entry& r);
 
 public:
 	boost::unordered::unordered_map<sha1_hash,boost::shared_ptr<nsw::term_vector> > m_torrents_term_vectors;
@@ -219,6 +226,8 @@ public:
 	std::uint32_t m_search_id = 0;
 #endif
 };
+
+void add_friend_engine(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const& v,node& node);
 } }
 
 #endif // NSW_NODE_HPP

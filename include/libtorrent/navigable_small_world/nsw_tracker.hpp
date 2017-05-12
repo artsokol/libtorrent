@@ -104,7 +104,7 @@ public:
 		void get_friends(node& item
 			, sha1_hash const& ih
 			, std::string const& target
-			, std::function<void(std::multimap<double, tcp::endpoint> const&)> f);
+			, std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const&)> f);
 		void announce(sha1_hash const& ih, int listen_port, int flags
 			, std::function<void(std::vector<tcp::endpoint> const&)> f);
 
