@@ -134,11 +134,6 @@ namespace libtorrent { namespace nsw {
 						_item.second.get()->key_refresh_timer.cancel(ec);
 						_item.second.get()->connection_timer.cancel(ec);
 						_item.second.get()->refresh_timer.cancel(ec);});
-//		m_key_refresh_timer_vec.cancel(ec);
-//		m_connection_timer_vec.cancel(ec);
-
-//		m_refresh_timer.cancel(ec);
-//		m_host_resolver.cancel();
 	}
 
 	// void nsw_tracker::nsw_status(std::vector<nsw_routing_bucket>& table
@@ -203,10 +198,6 @@ namespace libtorrent { namespace nsw {
 		m_log->nsw_log(nsw_logger_interface::tracker, "*** new write key***");
 #endif
 	}
-
-	// void nsw_tracker::update_storage_node_ids()
-	// {
-	// }
 
 	void nsw_tracker::get_friends(node& item, sha1_hash const& ih
 								, std::string const& target
@@ -365,7 +356,7 @@ namespace libtorrent { namespace nsw {
 
 
 			std::shared_ptr<timers_t> timerRef(new timers_t(m_io_srv));
-//			timers_t node_timers(m_io_srv);
+
 			m_timers_vec.insert(std::make_pair(nodeRef.get()->nid(),timerRef));
 
 			if(m_status == started)

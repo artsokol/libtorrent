@@ -179,7 +179,7 @@ public:
 					, int rtt);
 
 	//update time
-	void heard_about(node_id const& id, udp::endpoint const& ep);
+	void heard_about(node_id const& id/*, udp::endpoint const& ep*/);
 
 	// change our node ID. This can be expensive since nodes must be moved around
 	// and potentially dropped
@@ -233,16 +233,7 @@ public:
 					, std::vector<node_entry>& l, int count=0);
 //	std::int64_t num_global_nodes() const;
 
-//	int num_active_buckets() const { return int(m_buckets.size()); }
-
 //	void replacement_cache(bucket_t& nodes) const;
-
-//	int bucket_limit(int bucket) const;
-	// enum
-	// {
-	// 	// nodes that have not been pinged are considered failed by this flag
-	// 	include_failed = 1
-	// };
 
 	// fills the vector with the count nodes that
 	// are nearest to the given term vector.
@@ -266,6 +257,7 @@ private:
 							, routing_table::table_type_t& type
 							, int& index);
 
+	node_entry* find_node(node_id const& id);
 
 	bool fill_from_replacements(node_entry& ne);
 

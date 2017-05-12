@@ -146,6 +146,28 @@ node_entry* routing_table::find_node(udp::endpoint const& ep
 	return nullptr;
 }
 
+node_entry* routing_table::find_node(node_id const& id)
+{
+	for (routing_table_t::iterator j = m_close_nodes_rt.begin();
+		j != m_close_nodes_rt.end(); ++j)
+	{
+		if (j->id == id)
+		{
+			return &*j;
+		}
+	}
+
+	for (routing_table_t::iterator j = m_far_nodes_rt.begin();
+		j != m_far_nodes_rt.end(); ++j)
+	{
+		if (j->id == id)
+		{
+			return &*j;
+		}
+	}
+	return nullptr;
+}
+
 	// fills the vector with the k nodes from our storage that
 	// are nearest to the given text.
 void routing_table::find_node(vector_t const& target_string
@@ -666,15 +688,15 @@ void routing_table::log_node_added(node_entry const& ne) const
 
 // }
 
-void routing_table::heard_about(node_id const& id, udp::endpoint const& ep)
+void routing_table::heard_about(node_id const& id)
 {
 	int index = -1;
 	routing_table::table_type_t table_type = routing_table::none;
 
 	// check if we already have this node
-	node_entry* existing = find_node(ep, table_type, index);
+	node_entry* existing = find_node(id);
 
-	if(existing && existing->id == id)
+	if(existing)
 		existing->last_queried  = aux::time_now();
 
 	return;

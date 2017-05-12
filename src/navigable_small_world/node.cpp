@@ -68,7 +68,6 @@ node::node(udp proto, udp_socket_interface* sock
 	, std::string const& description
 	, nsw_logger_observer_interface* observer
 	, counters& cnt)
-//	, std::map<std::string, node*> const& nodes)
 	: m_settings(settings)
 	, m_id(calculate_node_id(nid, observer, proto))
 	, m_description(description)
@@ -158,14 +157,12 @@ std::string node::generate_token(udp::endpoint const& addr, sha1_hash const& inf
 	hasher h;
 	error_code ec;
 	std::string const address = addr.address().to_string(ec);
-//	TORRENT_ASSERT(!ec);
 	h.update(address);
 	h.update(reinterpret_cast<char*>(&m_secret[0]), sizeof(m_secret[0]));
 	h.update(info_hash);
 
 	sha1_hash const hash = h.final();
 	std::copy(hash.begin(), hash.begin() + 4, token.begin());
-//	TORRENT_ASSERT(std::equal(token.begin(), token.end(), hash.data()));
 	return token;
 }
 
@@ -173,7 +170,6 @@ void node::bootstrap(/*std::vector<udp::endpoint> const& nodes,*/
 		find_data::nodes_callback const& f)
 {
 	node_id nid = m_id;
-
 //	make_id_secret(target);
 
 	auto r = std::make_shared<nsw::bootstrap>(*this
@@ -214,11 +210,6 @@ void node::bootstrap(/*std::vector<udp::endpoint> const& nodes,*/
 	r->start();
 
 }
-
-// int node::bucket_size(int bucket)
-// {
-// 	return m_table.bucket_size(bucket);
-// }
 
 void node::new_write_key()
 {
@@ -285,17 +276,8 @@ void node::incoming(msg const& m)
 		case 'q':
 		{
 			TORRENT_ASSERT(m.message.dict_find_string_value("y") == "q");
-			// When a DHT node enters the read-only state, it no longer
-			// responds to 'query' messages that it receives.
-//			if (m_settings.read_only) break;
 
 			if (!native_address(m.addr)) break;
-
-			// if (!m_sock->has_quota())
-			// {
-			// 	m_counters.inc_stats_counter(counters::nsw_messages_in_dropped);
-			// 	return;
-			// }
 
 			entry e;
 			incoming_request(m, e);
@@ -346,7 +328,7 @@ void node::add_node(udp::endpoint const& node, node_id const& id)
 	if (!native_address(node)) return;
 	// ping the node, and if we get a reply, it
 	// will be added to the routing table
-	send_ping(node, id);//, m_table.num_active_buckets());
+	send_ping(node, id);
 
 
 	//m_table.add_node(node);
@@ -378,7 +360,6 @@ public:
 		: observer_interface(algorithm, ep, id, vector_t())
 	{}
 
-
 	// parses out "nodes"
 	void reply(msg const& m) override
 	{
@@ -398,6 +379,11 @@ public:
 			return;
 		}
 
+		bdecode_node q_id = r.dict_find_string("q_id");
+
+		node_id checked_id(q_id.string_ptr());
+
+		algorithm()->get_node().m_table.heard_about(checked_id);
 		// look for nodes
 		// udp const protocol = algorithm()->get_node().get_protocol();
 		// int const protocol_size = int(detail::address_size(protocol));
@@ -429,17 +415,10 @@ void node::tick()
 	send_ping(ne->endpoint, ne->id);
 }
 
-void node::send_ping(udp::endpoint const& ep, /*int bucket
-	, */node_id const& id)
+void node::send_ping(udp::endpoint const& ep
+					,node_id const& id)
 {
-//	TORRENT_ASSERT(id != m_id);
-
-	// generate a random node_id within the given bucket
-	// TODO: 2 it would be nice to have a bias towards node-id prefixes that
-	// are missing in the bucket
-	// node_id mask = generate_prefix_mask(bucket + 1);
-	// node_id target = generate_secret_id() & ~mask;
-	// target |= m_id & mask;
+	TORRENT_ASSERT(id != m_id);
 
 	// create a dummy traversal_algorithm
 	auto const algo = std::make_shared<traversal_algorithm>(*this, m_id, m_table.get_descr());
@@ -450,22 +429,11 @@ void node::send_ping(udp::endpoint const& ep, /*int bucket
 	e["y"] = "q";
 	entry& a = e["a"];
 
-//	if (m_table.is_full())
-//	{
-		// just ping it.
-		e["q"] = "ping";
-		a["q_id"] = m_id.to_string();
-		a["r_id"] = id.to_string();
-		m_counters.inc_stats_counter(counters::nsw_ping_out);
-//	}
-	// else
-	// {
-	// 	// use get_peers instead of find_node. We'll get nodes in the response
-	// 	// either way.
-	// 	e["q"] = "get_peers";
-	// 	a["info_hash"] = target.to_string();
-	// 	m_counters.inc_stats_counter(counters::nsw_get_peers_out);
-	// }
+	// just ping it.
+	e["q"] = "ping";
+	a["q_id"] = m_id.to_string();
+	a["r_id"] = id.to_string();
+	m_counters.inc_stats_counter(counters::nsw_ping_out);
 	std::string fake;
 	m_rpc.invoke(e, ep, o, fake);
 }
@@ -480,13 +448,6 @@ time_duration node::connection_timeout()
 	return d;
 }
 
-// void node::status(std::vector<nsw_routing_bucket>& table
-// 	, std::vector<nsw_lookup>& requests)
-// {
-
-// }
-
-
 void node::lookup_friends(sha1_hash const& info_hash
 						, vector_t const& target
 						, entry& reply
@@ -494,8 +455,6 @@ void node::lookup_friends(sha1_hash const& info_hash
 {
 	if (m_observer)
 		m_observer->get_friends(info_hash, term_vector::vectorToString(target));
-
-	//return m_storage.get_friends(info_hash, target, requester, reply);
 }
 
 entry write_nodes_entry(std::vector<node_entry> const& closest_nodes
@@ -530,7 +489,6 @@ void node::incoming_request(msg const& m, entry& e)
 
 	key_desc_t const top_desc[] = {
 		{"q", bdecode_node::string_t, 0, 0},
-//		{"ro", bdecode_node::int_t, 0, key_desc_t::optional},
 		{"a", bdecode_node::dict_t, 0, key_desc_t::parse_children},
 			{"q_id", bdecode_node::string_t, 20, 0},
 			{"r_id", bdecode_node::string_t, 20, key_desc_t::last_child},
@@ -548,7 +506,6 @@ void node::incoming_request(msg const& m, entry& e)
 	e["ip"] = endpoint_to_bytes(m.addr);
 
 	bdecode_node arg_ent = top_level[1];
-//	bool read_only = top_level[1] && top_level[1].int_value() != 0;
 	node_id id(top_level[2].string_ptr());
 	node_id requested_id(top_level[3].string_ptr());
 
@@ -557,14 +514,6 @@ void node::incoming_request(msg const& m, entry& e)
 		//bootstrap
 		is_bootstrap_req = true;
 	}
-	// if this nodes ID doesn't match its IP, tell it what
-	// its IP is with an error
-	// don't enforce this yet
-	// if (m_settings.enforce_node_id && !verify_id(id, m.addr.address()))
-	// {
-	// 	incoming_error(e, "invalid node ID");
-	// 	return;
-	// }
 
 	if(!is_bootstrap_req && m_id != requested_id)
 	{
@@ -574,9 +523,6 @@ void node::incoming_request(msg const& m, entry& e)
 				, aux::to_hex(m_id).c_str());
 		return;
 	}
-
-//	if (!read_only)
-	//m_table.heard_about(id, m.addr); //&&&&&&&&&&&&&&?????????????????????????????????????????
 
 	entry& reply = e["r"];
 	m_rpc.add_our_id(reply); //add q_id
@@ -617,8 +563,6 @@ void node::incoming_request(msg const& m, entry& e)
 		// If our storage is full we want to withhold the write token so that
 		// announces will spill over to our neighbors. This widens the
 		// perimeter of nodes which store peers for this torrent
-		// bool full = lookup_peers(info_hash, reply, noseed, scrape, m.addr.address());
-		//if (!full)
 		reply["token"] = generate_token(m.addr, id);
 
 #ifndef TORRENT_DISABLE_LOGGING
@@ -715,18 +659,6 @@ void node::write_nodes_entries(bdecode_node const& want, entry& r)
 
 	entry& friends_vec = r["friends"];
 	write_nodes_entry(closest_friends, got_vector, friends_vec);
-
-	// 	bdecode_node wanted = want.list_at(i);
-	// 	if (wanted.type() != bdecode_node::string_t)
-	// 		continue;
-	// 	auto wanted_node = m_nodes.find(wanted.string_value().to_string());
-	// 	if (wanted_node == m_nodes.end()) continue;
-	// 	std::vector<node_entry> n;
-	// 	wanted_node->second->m_table.find_node(info_hash, n, 0);
-	// 	r[wanted_node->second->protocol_nodes_key()] = write_nodes_entry(n);
-	// }
-
-	// 		std::multimap<double, tcp::endpoint> friends_list;
 }
 
 node::protocol_descriptor const& node::map_protocol_to_descriptor(udp protocol)
@@ -753,9 +685,6 @@ node::protocol_descriptor const& node::map_protocol_to_descriptor(udp protocol)
 
 
 void add_friend_engine(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const& v, node& node)
-															/*, int const listen_port
-															, sha1_hash const& ih
-															, int const flags)*/
 {
 #ifndef TORRENT_DISABLE_LOGGING
 		auto logger = node.observer();
@@ -779,15 +708,14 @@ void add_friend_engine(std::vector<std::tuple<node_id, udp::endpoint, std::strin
 		entry e;
 		e["y"] = "q";
 		e["q"] = "add_friend";
+
 		entry& a = e["a"];
-//			a["info_hash"] = ih;
 		a["port"] = std::get<1>(p).port();
 		a["token"] = std::get<2>(p);
-		a["r_id"] = std::get<0>(p).to_string();//target_nid().to_string();//m_r_id.to_string();
+		a["r_id"] = std::get<0>(p).to_string();
 		entry& term_vec = a["description"];
 		term_vector::vectorToEntry(node.descr_vec(),term_vec);
-		//a["seed"] = (flags & node::flag_seed) ? 1 : 0;
-		//std::get<1>(node)if (flags & node::flag_implied_port) a["implied_port"] = 1;
+
 		std::string fake;
 		node.m_rpc.invoke(e, std::get<1>(p), o, fake);
 	}
@@ -809,21 +737,9 @@ void add_friend_observer::reply(libtorrent::nsw::msg const& m)
 
 	bdecode_node q_id = r.dict_find_string("q_id");
 
-	//if(q_id)
 	node_id querying_id(q_id.string_ptr());
 
 	bdecode_node received_term_vector = r.dict_find_dict("description");
-	// key_desc_t const msg_desc[] = {
-	// 	{"description", bdecode_node::dict_t, 0, key_desc_t::parse_children},
-	// };
-
-	// bdecode_node add_friend_resp_attributes[1];
-
-	// 	if (!verify_message(arg_ent, msg_desc, add_friend_resp_attributes, error_string))
-	// 	{
-	// 		incoming_error(e, error_string);
-	// 		return;
-	// 	}
 
 	vector_t friend_descr;
 	term_vector::bencodeToVector(received_term_vector,friend_descr);
@@ -833,8 +749,6 @@ void add_friend_observer::reply(libtorrent::nsw::msg const& m)
 															, friend_descr
 															, ~0
 															, true));
-
-
 }
 
 } }
