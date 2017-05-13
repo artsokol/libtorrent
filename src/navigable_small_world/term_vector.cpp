@@ -172,7 +172,9 @@ double term_vector::hardCosineMeasure(const wvector_t& textVec1, const wvector_t
     }
 
     //cos(O) = a*b/(||a||*||b||)
-    return dot / (sqrt(denom1) * sqrt(denom2)) ;
+    double result = dot / (sqrt(denom1) * sqrt(denom2));
+
+    return result > static_cast<double>(0.9999999)?1.0:result;
 }
 
 double term_vector::hardCosineMeasure(const vector_t& textVec1, const vector_t& textVec2)
@@ -200,7 +202,9 @@ double term_vector::hardCosineMeasure(const vector_t& textVec1, const vector_t& 
     }
 
     //cos(O) = a*b/(||a||*||b||)
-    return dot / (sqrt(denom1) * sqrt(denom2)) ;
+    double result = dot / (sqrt(denom1) * sqrt(denom2));
+
+    return result > static_cast<double>(0.9999999)?1.0:result;
 }
 
 double term_vector::softCosineMeasure(const wvector_t& textVec1, const wvector_t& textVec2)
@@ -241,7 +245,9 @@ double term_vector::softCosineMeasure(const wvector_t& textVec1, const wvector_t
         }
     }
 
-    return dot / (sqrt(denom1) * sqrt(denom2)) ;
+    double result = dot / (sqrt(denom1) * sqrt(denom2));
+
+    return result > static_cast<double>(0.9999999)?1.0:result;
 }
 
 double term_vector::softCosineMeasure(const vector_t& textVec1, const vector_t& textVec2)
@@ -279,7 +285,9 @@ double term_vector::softCosineMeasure(const vector_t& textVec1, const vector_t& 
         }
     }
 
-    return dot / (sqrt(denom1) * sqrt(denom2)) ;
+    double result = dot / (sqrt(denom1) * sqrt(denom2));
+
+    return result > static_cast<double>(0.9999999)?1.0:result;
 }
 
 double term_vector::getVecSimilarity(const wvector_t& textVec1, const wvector_t& textVec2)
