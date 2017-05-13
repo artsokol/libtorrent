@@ -4591,6 +4591,20 @@ namespace aux {
 		m_alerts.emplace_alert<dht_stats_alert>(std::move(table), std::move(requests));
 	}
 
+	void session_impl::post_nsw_stats()
+	{
+		//std::vector<dht_lookup> requests;
+		nsw_nodes_content_table_t cf_tables;
+		nsw_nodes_content_table_t ff_tables;
+
+#ifndef TORRENT_DISABLE_NSW
+		if (m_nsw)
+			m_nsw->nsw_status(cf_tables, ff_tables);
+#endif
+
+		m_alerts.emplace_alert<nsw_stats_alert>(std::move(cf_tables), std::move(ff_tables));
+	}
+
 	std::vector<torrent_handle> session_impl::get_torrents() const
 	{
 		std::vector<torrent_handle> ret;

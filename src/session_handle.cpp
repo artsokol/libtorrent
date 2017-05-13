@@ -167,6 +167,11 @@ namespace libtorrent
 		async_call(&session_impl::post_dht_stats);
 	}
 
+	void session_handle::post_nsw_stats()
+	{
+		async_call(&session_impl::post_nsw_stats);
+	}
+
 	io_service& session_handle::get_io_service()
 	{
 		return m_impl->get_io_service();

@@ -57,6 +57,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/shared_array.hpp>
 #include "libtorrent/aux_/disable_warnings_pop.hpp"
 
+#include "libtorrent/navigable_small_world/node_entry.hpp"
 namespace libtorrent
 {
 	// maps an operation id (from peer_error_alert and peer_disconnected_alert)
@@ -2657,6 +2658,31 @@ namespace libtorrent
 		std::reference_wrapper<aux::stack_allocator> m_alloc;
 		int const m_num_friends;
 		aux::allocation_slot m_friends_idx;
+	};
+
+	using nsw_nodes_content_table_t =
+			std::unordered_map<sha1_hash, std::pair<std::string, std::vector<nsw::node_entry> > >;
+	// contains current NSW state. Posted in response to session::post_dht_stats().
+	struct TORRENT_EXPORT nsw_stats_alert final : alert
+	{
+		// internal
+		nsw_stats_alert(aux::stack_allocator& alloc
+			, nsw_nodes_content_table_t cf_tables //closest friends
+			, nsw_nodes_content_table_t ff_tables //far friends
+			);
+
+		TORRENT_DEFINE_ALERT(nsw_stats_alert, 97)
+
+		static const int static_category = alert::stats_notification;
+		virtual std::string message() const override;
+
+		// a vector of the currently running DHT lookups.
+		//std::vector<dht_lookup> const active_requests;
+
+		// contains information about every bucket in the DHT routing
+		// table.
+		nsw_nodes_content_table_t const cf_routing_tables;
+		nsw_nodes_content_table_t const ff_routing_tables;
 	};
 
 	struct TORRENT_EXPORT nsw_lookup

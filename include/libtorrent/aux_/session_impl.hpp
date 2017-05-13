@@ -499,7 +499,7 @@ namespace libtorrent
 			void post_torrent_updates(std::uint32_t flags);
 			void post_session_stats();
 			void post_dht_stats();
-
+			void post_nsw_stats();
 			std::vector<torrent_handle> get_torrents() const;
 
 			void pop_alerts(std::vector<alert*>* alerts);

@@ -166,6 +166,16 @@ std::string node::generate_token(udp::endpoint const& addr, sha1_hash const& inf
 	return token;
 }
 
+
+void node::status(std::vector<node_entry>& cf_table
+		 	, std::vector<node_entry>& ff_table)
+{
+
+	std::lock_guard<std::mutex> l(m_mutex);
+
+	m_table.status(cf_table,ff_table);
+}
+
 void node::bootstrap(/*std::vector<udp::endpoint> const& nodes,*/
 		find_data::nodes_callback const& f)
 {

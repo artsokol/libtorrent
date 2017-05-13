@@ -183,6 +183,9 @@ namespace libtorrent
 		// This will cause a dht_stats_alert to be posted.
 		void post_dht_stats();
 
+		// This will cause a nsw_stats_alert to be posted.
+		void post_nsw_stats();
+
 		// internal
 		io_service& get_io_service();
 

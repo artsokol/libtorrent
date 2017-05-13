@@ -159,6 +159,9 @@ public:
 
 	void status(nsw_routing_info& s) const;
 
+	void status(routing_table_t& cf_table
+		 	, routing_table_t& ff_table) const;
+
 	void node_failed(node_id const& nid, udp::endpoint const& ep);
 
 	void add_gate_node(udp::endpoint const& router, vector_t const&);

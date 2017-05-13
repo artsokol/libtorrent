@@ -185,8 +185,8 @@ public:
 		m_running_requests.erase(a);
 	}
 
-	// void status(std::vector<nsw_routing_bucket>& table
-	// 	, std::vector<nsw_lookup>& requests);
+	void status(std::vector<node_entry>& cf_table
+		 	, std::vector<node_entry>& ff_table);
 
 	std::tuple<int, int, int> get_stats_counters() const;
 

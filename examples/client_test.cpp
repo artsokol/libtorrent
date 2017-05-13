@@ -168,6 +168,7 @@ bool print_matrix = false;
 bool print_file_progress = false;
 bool show_pad_files = false;
 bool show_dht_status = false;
+bool show_nsw_status = true;
 bool sequential_download = false;
 
 bool print_ip = true;
@@ -187,6 +188,11 @@ std::vector<libtorrent::dht_lookup> dht_active_requests;
 std::vector<libtorrent::dht_routing_bucket> dht_routing_table;
 #endif
 
+#ifndef TORRENT_DISABLE_NSW
+std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<libtorrent::nsw::node_entry> > > cf_routing_tables;
+std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<libtorrent::nsw::node_entry> > > ff_routing_tables;
+#endif
+
 torrent_view view;
 session_view ses_view;
 
@@ -195,6 +201,21 @@ std::string to_hex(lt::sha1_hash const& s)
 	std::stringstream ret;
 	ret << s;
 	return ret.str();
+}
+
+std::string vectorToString(const std::unordered_map<std::string, double>& termVector)
+{
+    std::string out;
+    for_each(termVector.begin(),termVector.end(),[&out](const std::pair<std::string, double>& map_item)
+                                                        {
+                                                            double dummy_param;
+                                                            double mantissa = std::modf(map_item.second, &dummy_param);
+                                                            mantissa = (mantissa == 0)?0:mantissa*10e3;
+
+                                                            out += map_item.first + ":0," + std::to_string(int(mantissa)) + ";";
+                                                        });
+    out.pop_back();
+    return out;
 }
 
 int load_file(std::string const& filename, std::vector<char>& v
@@ -863,6 +884,15 @@ bool handle_alert(libtorrent::session& ses, libtorrent::alert* a
 	}
 #endif
 
+#ifndef TORRENT_DISABLE_NSW
+	if (nsw_stats_alert* p = alert_cast<nsw_stats_alert>(a))
+	{
+		cf_routing_tables = p->cf_routing_tables;
+		ff_routing_tables = p->ff_routing_tables;
+		return true;
+	}
+#endif
+
 #ifdef TORRENT_USE_OPENSSL
 	if (torrent_need_cert_alert* p = alert_cast<torrent_need_cert_alert>(a))
 	{
@@ -1498,6 +1528,10 @@ int main(int argc, char* argv[])
 		ses.post_torrent_updates();
 		ses.post_session_stats();
 		ses.post_dht_stats();
+#ifndef TORRENT_DISABLE_NSW
+		ses.post_nsw_stats();
+#endif
+
 
 		int terminal_width = 80;
 		int terminal_height = 50;
@@ -1751,6 +1785,7 @@ int main(int argc, char* argv[])
 				if (c == 'f') print_file_progress = !print_file_progress;
 				if (c == 'P') show_pad_files = !show_pad_files;
 				if (c == 'g') show_dht_status = !show_dht_status;
+				if (c == 'N') show_nsw_status = !show_nsw_status;
 				if (c == 'u') ses_view.print_utp_stats(!ses_view.print_utp_stats());
 				if (c == 'x') print_disk_stats = !print_disk_stats;
 				// toggle columns
@@ -1793,6 +1828,7 @@ int main(int argc, char* argv[])
 						"[g] show DHT                                    [x] toggle disk cache stats\n"
 						"[t] show trackers                               [l] toggle show log\n"
 						"[P] show pad files (in file list)               [y] toggle show piece matrix\n"
+						"[n] show NSW \n"
 						"\n"
 						"COLUMN OPTIONS\n"
 						"[1] toggle IP column                            [2]\n"
@@ -1895,6 +1931,51 @@ int main(int argc, char* argv[])
 				out += str;
 				pos += 1;
 			}
+
+		}
+#endif
+#ifndef TORRENT_DISABLE_NSW
+		if (show_nsw_status)
+		{
+			TORRENT_ASSERT(cf_routing_tables.size() == ff_routing_tables.size());
+
+			std::string buf = "NSW stats:\n";
+			pos += 1;
+			auto cf_it = cf_routing_tables.begin();
+			auto ff_it = ff_routing_tables.begin();
+
+			for(;cf_it != cf_routing_tables.end();++cf_it,++ff_it)
+			{
+				std::vector<libtorrent::nsw::node_entry>& closest_friends = cf_it->second.second;
+				std::vector<libtorrent::nsw::node_entry>& far_friends = ff_it->second.second;
+
+				buf += "NSW node: id " + std::string(to_hex(cf_it->first).c_str()) + " descr " + cf_it->second.first + "\n";
+				pos += 1;
+
+
+				buf += "close friends (" + std::to_string(closest_friends.size()) + "):\n";
+				pos += 1;
+
+				for(auto n:closest_friends)
+				{
+					buf += "friend: " + std::string(to_hex(n.id).c_str()) + " term vector " + vectorToString(n.term_vector).substr(0,25) + "\n";
+					pos += 1;
+				}
+
+				buf += "far friends (" + std::to_string(far_friends.size()) + "):\n";;
+				pos += 1;
+
+				for(auto n:far_friends)
+				{
+					buf += "friend: " + std::string(to_hex(n.id).c_str()) + " term vector " + vectorToString(n.term_vector).substr(0,25) + "\n";
+					pos += 1;
+				}
+				buf += "\n";
+				pos += 1;
+			}
+
+			out += buf;
+//			pos += 1;
 		}
 #endif
 		if (h.is_valid())

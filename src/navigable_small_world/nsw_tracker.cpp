@@ -44,30 +44,21 @@ namespace libtorrent { namespace nsw {
 		, send_fun_t const& send_fun
 		, nsw_settings const& settings
 		, counters& cnt
-//		, nsw_storage_interface& storage
 		, nsw_state state)
 		: m_counters(cnt)
-//		, m_storage(storage)
 		, m_state(std::move(state))
 //		, m_nsw_templ(udp::v4(), this, settings, m_state.nid, ""
 //			, observer, cnt)
 		, m_send_fun(send_fun)
 		, m_log(observer)
 		, m_timers_vec()
-		// , m_key_refresh_timer(ios)
-		// , m_connection_timer(ios)
-		// , m_refresh_timer(ios)
 		, m_settings(settings)
 		, m_status(not_init)
-//		, m_host_resolver(ios)
+
 		, m_last_tick(aux::time_now())
 		, m_io_srv(ios)
 		, m_current_callback(nullptr)
 	{
-//		m_nodes.insert(std::make_pair(m_nsw_templ.protocol_family_name(), &m_nsw_templ));
-
-
-//		update_storage_node_ids();
 
 #ifndef TORRENT_DISABLE_LOGGING
 		if (m_log->should_log(nsw_logger_interface::tracker))
@@ -91,7 +82,6 @@ namespace libtorrent { namespace nsw {
 	void nsw_tracker::update_node_description(node& item, std::string const& new_descr)
 	{
 		item.update_node_description(new_descr);
-//		update_storage_node_descriptions();
 	}
 
 	void nsw_tracker::start(find_data::nodes_callback const& f)
@@ -136,12 +126,21 @@ namespace libtorrent { namespace nsw {
 						_item.second.get()->refresh_timer.cancel(ec);});
 	}
 
-	// void nsw_tracker::nsw_status(std::vector<nsw_routing_bucket>& table
-	// 	, std::vector<nsw_lookup>& requests)
-	// {
-	// 	(void)table;
-	// 	(void)requests;
-	// }
+	void nsw_tracker::nsw_status(nsw_nodes_content_table_t& cf_tables
+		 	, nsw_nodes_content_table_t& ff_tables)
+	{
+		std::for_each(m_nodes.begin(),m_nodes.end(),[&cf_tables, &ff_tables]
+										(node_collection_t::value_type& table_item)
+										{
+											routing_table_t cf_table;
+											routing_table_t ff_table;
+											table_item.second.get()->status(cf_table,ff_table);
+											cf_tables.emplace(table_item.second.get()->nid()
+														, std::make_pair(table_item.second.get()->descr().substr(0,25),cf_table));
+											ff_tables.emplace(table_item.second.get()->nid()
+														, std::make_pair(table_item.second.get()->descr().substr(0,25),ff_table));
+										});;
+	}
 
 	// void nsw_tracker::update_stats_counters(counters& c) const
 	// {
@@ -160,7 +159,6 @@ namespace libtorrent { namespace nsw {
 		TORRENT_ASSERT(it != m_timers_vec.end());
 
 		deadline_timer& timer = it->second.get()->connection_timer;
-		//m_timers_vec.at(n.nid()).get()->connection_timer;
 		timer.expires_from_now(d, ec);
 		timer.async_wait(std::bind(&nsw_tracker::connection_timeout, self(), std::ref(n), _1));
 	}
@@ -207,17 +205,6 @@ namespace libtorrent { namespace nsw {
 		vector_t target_vec;
 		term_vector::makeTermVector(target,target_vec);
 		item.get_friends(ih, target_vec, f, empty);
-	}
-
-
-
-	void nsw_tracker::announce(sha1_hash const& ih, int listen_port, int flags
-		, std::function<void(std::vector<tcp::endpoint> const&)> f)
-	{
-		(void)ih;
-		(void)listen_port;
-		(void)flags;
-		(void)f;
 	}
 
 //	namespace {

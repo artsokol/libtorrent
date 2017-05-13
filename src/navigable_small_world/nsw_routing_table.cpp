@@ -61,6 +61,15 @@ void routing_table::status(nsw_routing_info& s) const
 	s.num_long_links = m_far_nodes_rt.size();
 }
 
+void routing_table::status(routing_table_t& cf_table
+		 	, routing_table_t& ff_table) const
+{
+	std::for_each(m_close_nodes_rt.begin(),m_close_nodes_rt.end(),[&cf_table](node_entry const& n)
+																	{cf_table.push_back(n);});
+
+	std::for_each(m_far_nodes_rt.begin(),m_far_nodes_rt.end(),[&ff_table](node_entry const& n)
+																	{ff_table.push_back(n);});
+}
 
 std::tuple<size_t, size_t, size_t> routing_table::size() const
 {

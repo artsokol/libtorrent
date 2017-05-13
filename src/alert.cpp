@@ -1801,6 +1801,39 @@ namespace libtorrent {
 		return buf;
 	}
 
+
+	nsw_stats_alert::nsw_stats_alert(aux::stack_allocator&
+		, nsw_nodes_content_table_t cf_tables
+		, nsw_nodes_content_table_t ff_tables)
+		: alert()
+		, cf_routing_tables(std::move(cf_tables))
+		, ff_routing_tables(std::move(ff_tables))
+	{}
+
+	std::string nsw_stats_alert::message() const
+	{
+		TORRENT_ASSERT(cf_routing_tables.size() == ff_routing_tables.size());
+
+		std::string buf = "NSW stats:\n";
+		auto cf_it = cf_routing_tables.begin();
+		auto ff_it = ff_routing_tables.begin();
+		for(;cf_it != cf_routing_tables.end();++cf_it,++ff_it)
+		{
+			buf += "NSW node: id " + std::string(aux::to_hex(cf_it->first).c_str()) + " | descr " + cf_it->second.first + "\n";
+
+			buf += "close friends (" + std::to_string(cf_it->second.second.size()) + "):\n";
+
+			buf += "far friends (" + std::to_string(ff_it->second.second.size()) + "):\n";;
+
+			buf += "\n\n";
+		}
+
+		// std::snprintf(buf, sizeof(buf), "NSW stats: frends: close %d old: %d"
+		// 	, int(cf_routing_table.size())
+		// 	, int(ff_routing_table.size()));
+		return buf.c_str();
+	}
+
 	url_seed_alert::url_seed_alert(aux::stack_allocator& alloc, torrent_handle const& h
 		, string_view u, error_code const& e)
 		: torrent_alert(alloc, h)
