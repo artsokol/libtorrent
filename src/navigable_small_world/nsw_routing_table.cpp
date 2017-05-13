@@ -266,7 +266,8 @@ routing_table::add_node_status_t routing_table::add_friend_impl(node_entry e)
 	}
 	//TODO: add checking of size for m_close_nodes_rt
 
-	if( term_vector::getVecSimilarity(m_close_nodes_rt.back().term_vector,m_description_vec) >
+	if( m_close_nodes_rt.size() > m_neighbourhood_size &&
+		term_vector::getVecSimilarity(m_close_nodes_rt.back().term_vector,m_description_vec) >
 		term_vector::getVecSimilarity(e.term_vector,m_description_vec))
 	{
 		// in common we should not include this node in our friend list
