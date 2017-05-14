@@ -383,10 +383,10 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 		m_close_nodes_rt.push_back(e);
 
 		sort(m_close_nodes_rt.begin(), m_close_nodes_rt.end(),
-					[&e](node_entry const& a,node_entry const& b) -> bool
+					[this](node_entry const& a,node_entry const& b) -> bool
 					{
-						return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
-										term_vector::getVecSimilarity(b.term_vector,e.term_vector);
+						return term_vector::getVecSimilarity(a.term_vector,m_description_vec) >
+										term_vector::getVecSimilarity(b.term_vector,m_description_vec);
 					});
 #ifndef TORRENT_DISABLE_LOGGING
 		log_node_added(e);
@@ -409,19 +409,19 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 
 
 	sort(m_close_nodes_rt.begin(), m_close_nodes_rt.end(),
-				[&e](node_entry const& a,node_entry const& b) -> bool
+				[this](node_entry const& a,node_entry const& b) -> bool
 				{
-					return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
-										term_vector::getVecSimilarity(b.term_vector,e.term_vector);
+					return term_vector::getVecSimilarity(a.term_vector,m_description_vec) >
+										term_vector::getVecSimilarity(b.term_vector,m_description_vec);
 				});
 
 	if (!m_far_nodes_rt.empty())
 	{
 		sort(m_far_nodes_rt.begin(), m_close_nodes_rt.end(),
-					[&e](node_entry const& a,node_entry const& b) -> bool
+					[this](node_entry const& a,node_entry const& b) -> bool
 					{
-						return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
-											term_vector::getVecSimilarity(b.term_vector,e.term_vector);
+						return term_vector::getVecSimilarity(a.term_vector,m_description_vec) >
+											term_vector::getVecSimilarity(b.term_vector,m_description_vec);
 					});
 	}
 
