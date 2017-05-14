@@ -53,12 +53,8 @@ void get_friends_observer::reply(msg const& m)
 	bdecode_node me = r.dict_find_int("me");
 	if (me)
 	{
-		int received_num = me.int_value();
-		int digits = msg::count_digits(received_num);
-		tmp.simil = (digits != 0)?
-			 				received_num/std::pow(10, digits):
-			 				0.0;
-
+		std::string received_num_str =  "0." + std::string(me.string_value());
+		tmp.simil = std::stod(received_num_str);
 		// add for add_friend algorithm()->
 	}
 
@@ -271,17 +267,15 @@ observer_ptr get_friends::new_observer(udp::endpoint const& ep
 get_friends::node_item get_friends::read_node_item(char const* str_in)
 {
 	get_friends::node_item n;
-	std::string similsrity_str;
-	int similarity_offset = 6;
+	std::string similsrity_str = "0.";
+	int similarity_offset = 7;
 	std::copy(str_in, str_in + sizeof(node_id), n.id.begin());
 	str_in += sizeof(node_id);
 
-	std::copy(str_in, str_in + similarity_offset, similsrity_str.begin());
+	std::copy(str_in, str_in + similarity_offset, similsrity_str.begin()+2);
 
 	unsigned int received_num = std::stoi(similsrity_str);
-	n.similarity = (received_num != 0)?
-			  				received_num/std::pow(10, similarity_offset):
-			  				0.0;
+	n.similarity = std::stod(similsrity_str);
 
 	str_in += similarity_offset;
 	n.ep = detail::read_v4_endpoint<udp::endpoint>(str_in);

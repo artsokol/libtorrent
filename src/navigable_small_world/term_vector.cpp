@@ -1,11 +1,10 @@
 #include "libtorrent/navigable_small_world/term_vector.hpp"
 #include <algorithm>
-#include <cmath>
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
-#include <locale>
 
-#include <math.h>
+#include <iomanip> // setprecision
+#include <sstream>
 
 namespace libtorrent { namespace nsw {
 
@@ -174,7 +173,7 @@ double term_vector::hardCosineMeasure(const wvector_t& textVec1, const wvector_t
     //cos(O) = a*b/(||a||*||b||)
     double result = dot / (sqrt(denom1) * sqrt(denom2));
 
-    return result > static_cast<double>(0.9999999)?1.0:result;
+    return result > static_cast<double>(0.99999999)?1.0:result;
 }
 
 double term_vector::hardCosineMeasure(const vector_t& textVec1, const vector_t& textVec2)
@@ -204,7 +203,7 @@ double term_vector::hardCosineMeasure(const vector_t& textVec1, const vector_t& 
     //cos(O) = a*b/(||a||*||b||)
     double result = dot / (sqrt(denom1) * sqrt(denom2));
 
-    return result > static_cast<double>(0.9999999)?1.0:result;
+    return result > static_cast<double>(0.99999999)?1.0:result;
 }
 
 double term_vector::softCosineMeasure(const wvector_t& textVec1, const wvector_t& textVec2)
@@ -247,7 +246,7 @@ double term_vector::softCosineMeasure(const wvector_t& textVec1, const wvector_t
 
     double result = dot / (sqrt(denom1) * sqrt(denom2));
 
-    return result > static_cast<double>(0.9999999)?1.0:result;
+    return result > static_cast<double>(0.99999999)?1.0:result;
 }
 
 double term_vector::softCosineMeasure(const vector_t& textVec1, const vector_t& textVec2)
@@ -287,7 +286,7 @@ double term_vector::softCosineMeasure(const vector_t& textVec1, const vector_t& 
 
     double result = dot / (sqrt(denom1) * sqrt(denom2));
 
-    return result > static_cast<double>(0.9999999)?1.0:result;
+    return result > static_cast<double>(0.99999999)?1.0:result;
 }
 
 TORRENT_EXTRA_EXPORT double term_vector::getVecSimilarity(const wvector_t& textVec1, const wvector_t& textVec2)
@@ -398,11 +397,10 @@ std::wstring term_vector::vectorToString(const wvector_t& termVector)
     std::wstring out;
     for_each(termVector.begin(),termVector.end(),[&out](const std::pair<std::wstring, double>& map_item)
                                                         {
-                                                            double dummy_param;
-                                                            double mantissa = std::modf(map_item.second, &dummy_param);
-                                                            mantissa = (mantissa == 0)?0:mantissa*10e6;
-
-                                                            out += map_item.first + L":" + std::to_wstring(int(mantissa)) + L",";
+                                                            std::wstringstream ss;
+                                                            ss << std::fixed << std::setprecision(7) << map_item.second;
+                                                            std::wstring mantissa_str = ss.str();
+                                                            out += map_item.first + L":" + mantissa_str.substr(2,7); + L",";
                                                         });
     out.pop_back();
     return out;
@@ -413,11 +411,11 @@ std::string term_vector::vectorToString(const vector_t& termVector)
     std::string out;
     for_each(termVector.begin(),termVector.end(),[&out](const std::pair<std::string, double>& map_item)
                                                         {
-                                                            double dummy_param;
-                                                            double mantissa = std::modf(map_item.second, &dummy_param);
-                                                            mantissa = (mantissa == 0)?0:mantissa*10e6;
+                                                            std::stringstream ss;
+                                                            ss << std::fixed << std::setprecision(7) << map_item.second;
+                                                            std::string mantissa_str = ss.str();
 
-                                                            out += map_item.first + ":" + std::to_string(int(mantissa)) + ",";
+                                                            out += map_item.first + ":" + mantissa_str.substr(2,7) + ",";
                                                         });
     out.pop_back();
     return out;
@@ -427,11 +425,11 @@ entry& term_vector::vectorToEntry(const vector_t& termVector, entry& a)
 {
   for_each(termVector.begin(),termVector.end(),[&a](const std::pair<std::string, double>& map_item)
                                                         {
-                                                            double dummy_param;
-                                                            double mantissa = std::modf(map_item.second, &dummy_param);
-                                                            mantissa = (mantissa == 0)?0:mantissa*10e6;
+                                                            std::stringstream ss;
+                                                            ss << std::fixed << std::setprecision(7) << map_item.second;
+                                                            std::string mantissa_str = ss.str();
 
-                                                            a[map_item.first] = static_cast<int>(mantissa);
+                                                            a[map_item.first] = mantissa_str.substr(2,7);
                                                         });
   return a;
 }
@@ -446,12 +444,13 @@ vector_t& term_vector::bencodeToVector(bdecode_node const& encode_vec, vector_t&
 
         std::pair<string_view, bdecode_node> elem = encode_vec.dict_at(i);
 
-        int received_num = elem.second.int_value();
-        int digits = msg::count_digits(received_num);
-        double value = (digits != 0)?
-                            received_num/std::pow(10, digits):
-                            0.0;
-        out[elem.first.to_string()] = value;
+        std::string received_num_str = "0." + std::string(elem.second.string_value());
+
+        //int digits = msg::count_digits(received_num);
+        //double value = (digits != 0)?
+        //                    received_num/std::pow(10, digits):
+        //                    0.0;
+        out[elem.first.to_string()] = std::stod(received_num_str);
     }
 
     return out;

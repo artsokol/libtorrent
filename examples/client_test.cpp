@@ -35,6 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <cstring>
 #include <utility>
 #include <deque>
+#include <iomanip> // setprecision
 
 #include "libtorrent/config.hpp"
 
@@ -208,11 +209,11 @@ std::string vectorToString(const std::unordered_map<std::string, double>& termVe
     std::string out;
     for_each(termVector.begin(),termVector.end(),[&out](const std::pair<std::string, double>& map_item)
                                                         {
-                                                            double dummy_param;
-                                                            double mantissa = std::modf(map_item.second, &dummy_param);
-                                                            mantissa = (mantissa == 0)?0:mantissa*10e3;
+                                                        	std::stringstream ss;
+                                                            ss << std::fixed << std::setprecision(7) << map_item.second;
+                                                            std::string mantissa_str = ss.str();
 
-                                                            out += map_item.first + ":0," + std::to_string(int(mantissa)) + ";";
+                                                            out += map_item.first + ":0," + mantissa_str.substr(2,3) + ";";
                                                         });
     out.pop_back();
     return out;

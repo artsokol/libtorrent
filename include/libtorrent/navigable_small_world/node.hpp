@@ -5,6 +5,7 @@
 #include <set>
 #include <mutex>
 #include <cstdint>
+#include <iomanip> // setprecision
 
 #include "libtorrent/config.hpp"
 #include "libtorrent/navigable_small_world/nsw_routing_table.hpp"

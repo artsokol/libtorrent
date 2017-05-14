@@ -400,7 +400,7 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 	}
 
 	//node_entry& last_in_closest = m_close_nodes_rt.back();
-	if (m_close_nodes_rt.size()>m_neighbourhood_size)
+	if (m_close_nodes_rt.size() == m_neighbourhood_size)
 	{
 		m_far_nodes_rt.push_back(m_close_nodes_rt.back());
 		m_close_nodes_rt.pop_back();
@@ -415,7 +415,7 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 										term_vector::getVecSimilarity(b.term_vector,m_description_vec);
 				});
 
-	if (!m_far_nodes_rt.empty())
+	if (m_far_nodes_rt.size() > 1)
 	{
 		sort(m_far_nodes_rt.begin(), m_close_nodes_rt.end(),
 					[this](node_entry const& a,node_entry const& b) -> bool

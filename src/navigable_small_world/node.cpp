@@ -480,7 +480,7 @@ entry write_nodes_entry(std::vector<node_entry> const& closest_nodes
 
 		double similarity = term_vector::getVecSimilarity(n.term_vector, requested_vec);
         std::string similarity_str = std::to_string(similarity);
-        std::copy(similarity_str.begin()+2, similarity_str.begin()+8, out_itr);
+        std::copy(similarity_str.begin()+2, similarity_str.begin()+9, out_itr);
 
 		detail::write_endpoint(udp::endpoint(n.addr(), std::uint16_t(n.port())), out_itr);
 
@@ -662,10 +662,11 @@ void node::write_nodes_entries(bdecode_node const& want, entry& r)
 
 	if (best_friend_similarity < similarity_with_me)
 	{
-		double dummy_param;
-        double mantissa = std::modf(similarity_with_me, &dummy_param);
-        mantissa = (mantissa == 0)?0:mantissa*10e6;
-		r["me"] = static_cast<int>(mantissa);
+		std::stringstream ss;
+        ss << std::fixed << std::setprecision(7) << similarity_with_me;
+       	std::string mantissa_str = ss.str();
+
+		r["me"] = mantissa_str.substr(2,7);;
 	}
 
 	entry& friends_vec = r["friends"];
