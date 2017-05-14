@@ -707,7 +707,10 @@ void routing_table::heard_about(node_id const& id)
 	node_entry* existing = find_node(id);
 
 	if(existing)
+	{
 		existing->last_queried  = aux::time_now();
+		existing->reset_fail_count();
+	}
 
 	return;
 }

@@ -531,6 +531,7 @@ void node::incoming_request(msg const& m, entry& e)
 				requested id: %s and our id %s"
 				, aux::to_hex(requested_id).c_str()
 				, aux::to_hex(m_id).c_str());
+		incoming_error(e, "Bad id",203);
 		return;
 	}
 

@@ -239,8 +239,8 @@ void traversal_algorithm::failed(observer_ptr o, int const flags)
 {
 	// don't tell the routing table about
 	// node ids that we just generated ourself
-	if ((o->flags & observer_interface::flag_no_id) == 0)
-		m_node.m_table.node_failed(o->id(), o->target_ep());
+	//if ((o->flags & observer_interface::flag_no_id) == 0)
+	m_node.m_table.node_failed(o->id(), o->target_ep());
 
 	if (m_results.empty()) return;
 

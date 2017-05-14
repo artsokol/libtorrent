@@ -25,7 +25,9 @@ namespace libtorrent { namespace nsw {
 	time_duration const key_refresh
 		= duration_cast<time_duration>(minutes(15));
 	time_duration const ping_send_timeout
-		= duration_cast<time_duration>(seconds(15));
+		= duration_cast<time_duration>(seconds(5));
+	time_duration const unreachable_connections_check_timeout
+		= duration_cast<time_duration>(seconds(1));
 	// void add_nsw_counters(node const& nsw, counters& c)
 	// {
 	// 	int nodes, replacements, allocated_observers;
@@ -233,6 +235,7 @@ namespace libtorrent { namespace nsw {
 	bool nsw_tracker::incoming_packet(udp::endpoint const& ep
 		, span<char const> const buf)
 	{
+		bool is_bootstrap_req = false;
 		int const buf_size = int(buf.size());
 		if (buf_size <= 20
 			|| buf.front() != 'd'
@@ -260,11 +263,6 @@ namespace libtorrent { namespace nsw {
 // 			}
 // 		}
 
-		// if (!m_blocker.incoming(ep.address(), clock_type::now(), m_log))
-		// {
-		// 	m_counters.inc_stats_counter(counters::dht_messages_in_dropped);
-		// 	return true;
-		// }
 
 		TORRENT_ASSERT(buf_size > 0);
 
@@ -298,7 +296,7 @@ namespace libtorrent { namespace nsw {
 		std::for_each(m_nodes.begin(), m_nodes.end(), [this, &m]
 													(node_collection_t::value_type& table_item)
 													{ table_item.second.get()->incoming(m); });
-//		m_nsw_templ.incoming(m);
+
 		return true;
 	}
 
@@ -350,13 +348,13 @@ namespace libtorrent { namespace nsw {
 			{
 				error_code ec;
 				refresh_key(*(nodeRef), ec);
-				m_timers_vec.at(nodeRef->nid()).get()->connection_timer.expires_from_now(minutes(15), ec); //seconds(1)
+				m_timers_vec.at(nodeRef->nid()).get()->connection_timer.expires_from_now(unreachable_connections_check_timeout, ec); //seconds(1)
 				m_timers_vec.at(nodeRef->nid()).get()->connection_timer.async_wait(
 							std::bind(&nsw_tracker::connection_timeout
 																, self()
 																, std::ref(*nodeRef)
 																, _1));
-				m_timers_vec.at(nodeRef->nid()).get()->refresh_timer.expires_from_now(seconds(5), ec);
+				m_timers_vec.at(nodeRef->nid()).get()->refresh_timer.expires_from_now(ping_send_timeout, ec);
 				m_timers_vec.at(nodeRef->nid()).get()->refresh_timer.async_wait(std::bind(&nsw_tracker::ping_timeout
 																				, self()
 																				, std::ref(*nodeRef)

@@ -201,8 +201,10 @@ public:
 
 	bool native_address(udp::endpoint const& ep) const
 	{ return ep.protocol().family() == m_protocol.protocol.family(); }
+
 	bool native_address(tcp::endpoint const& ep) const
 	{ return ep.protocol().family() == m_protocol.protocol.family(); }
+
 	bool native_address(address const& addr) const
 	{
 		return (addr.is_v4() && m_protocol.protocol == m_protocol.protocol.v4())

@@ -239,7 +239,7 @@ bool rpc_manager::incoming(msg const& m, node_id* id)
 time_duration rpc_manager::tick()
 {
 	constexpr int short_timeout = 1;
-	constexpr int timeout = 15;
+	constexpr int timeout = 5;
 
 	// look for observers that have timed out
 
