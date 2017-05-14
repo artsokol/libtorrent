@@ -96,6 +96,24 @@ node_entry const* routing_table::next_for_refresh()
 	node_entry* candidate = nullptr;
 
 	//for (auto const &i : m_close_nodes_rt)
+
+	for (routing_table_t::iterator i = m_far_nodes_rt.begin();
+		i != m_far_nodes_rt.end(); ++i)
+	{
+		if (i->id == m_id) continue;
+
+		if (i->last_queried == min_time())
+		{
+			candidate = &*i;
+			break;
+		}
+
+		if (candidate == nullptr || i->last_queried < candidate->last_queried)
+		{
+			candidate = &*i;
+		}
+	}
+
 	for (routing_table_t::iterator i = m_close_nodes_rt.begin();
 		i != m_close_nodes_rt.end(); ++i)
 	{
@@ -105,7 +123,6 @@ node_entry const* routing_table::next_for_refresh()
 		{
 			candidate = &*i;
 			break;
-			//goto out;
 		}
 
 		if (candidate == nullptr || i->last_queried < candidate->last_queried)
@@ -417,7 +434,7 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 
 	if (m_far_nodes_rt.size() > 1)
 	{
-		sort(m_far_nodes_rt.begin(), m_close_nodes_rt.end(),
+		sort(m_far_nodes_rt.begin(), m_far_nodes_rt.end(),
 					[this](node_entry const& a,node_entry const& b) -> bool
 					{
 						return term_vector::getVecSimilarity(a.term_vector,m_description_vec) >
@@ -563,7 +580,7 @@ void routing_table::node_failed(node_id const& nid, udp::endpoint const& ep)
 		if (found_node->fail_count() >= m_settings.max_fail_count || !found_node->pinged())
 		{
 			//m_ips.erase(j->addr());
-			if (j == m_far_nodes_rt.end())
+			if (j != m_far_nodes_rt.end())
 				m_far_nodes_rt.erase(j);
 			else
 				m_replacement_nodes.erase(k);
