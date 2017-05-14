@@ -221,18 +221,32 @@ bool get_friends::appropriate_candidate_exists()
 	int k = m_node.m_table.neighbourhood_size();
 	int i = k;
 
-	auto it = friend_list.begin();
+	if(friend_list.size()>=k)
+	{
+		auto it = friend_list.begin();
 
-	while(--i>0) ++it;
+		// move iterator to i-th position
+		while(--i>0) ++it;
 
-	auto exists = std::find_if(candidates.begin(),candidates.end(),[&it](row const& item)
+		auto exists = std::find_if(candidates.begin(),candidates.end(),[&it](row const& item)
 																{
 																	return item.is_visited == false &&
 																		it->simil < item.simil;
 																});
-	//stop condition. needed to be updated
-	if (exists == candidates.end() /*|| friend_list.size() > k*/)
-		return false;
+		// stop condition. needed to be updated
+		if (exists == candidates.end() /*|| friend_list.size() > k*/)
+			return false;
+	}
+	else
+	{
+		// friend list very small. Any not visited nodes are good
+		auto exists = std::find_if(candidates.begin(),candidates.end(),[](row const& item)
+																{return item.is_visited == false;});
+
+		if (exists == candidates.end())
+			return false;
+
+	}
 
 	return true;
 }
