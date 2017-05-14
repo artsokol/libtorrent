@@ -1558,8 +1558,9 @@ int main(int argc, char* argv[])
 #endif
 
 			torrent_handle h = view.get_active_handle();
-
+#ifdef TORRENT_DISABLE_NSW
 			if (c == EOF) { break; }
+#endif
 			do
 			{
 				if (c == ESCAPE_SEQ)
@@ -1952,7 +1953,7 @@ int main(int argc, char* argv[])
 				std::unordered_map<std::string, double> descr_term_vector;
 				nsw::term_vector::makeTermVector(cf_it->second.first,descr_term_vector);
 				buf += "----------------------------------------------------------------------------------------------\n";
-				buf += "| NSW node | id: " + std::string(to_hex(cf_it->first).c_str()) + " | descr: " + cf_it->second.first + " |\n";
+				buf += "| NSW node | id: " + std::string(to_hex(cf_it->first).c_str()) + " | descr: " + cf_it->second.first.substr(0,35) + " |\n";
 				buf += "----------------------------------------------------------------------------------------------\n";
 				buf += "| close friends (" + std::to_string(closest_friends.size()) + "): |\n";
 				buf += "----------------------------------------------------------------------------------------------\n";

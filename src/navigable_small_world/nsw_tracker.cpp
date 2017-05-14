@@ -138,9 +138,9 @@ namespace libtorrent { namespace nsw {
 											routing_table_t ff_table;
 											table_item.second.get()->status(cf_table,ff_table);
 											cf_tables.emplace(table_item.second.get()->nid()
-														, std::make_pair(table_item.second.get()->descr().substr(0,25),cf_table));
+														, std::make_pair(table_item.second.get()->descr(),cf_table));
 											ff_tables.emplace(table_item.second.get()->nid()
-														, std::make_pair(table_item.second.get()->descr().substr(0,25),ff_table));
+														, std::make_pair(table_item.second.get()->descr(),ff_table));
 										});;
 	}
 
