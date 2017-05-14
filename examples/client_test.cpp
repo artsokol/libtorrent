@@ -1935,6 +1935,7 @@ int main(int argc, char* argv[])
 		}
 #endif
 #ifndef TORRENT_DISABLE_NSW
+#include "libtorrent/navigable_small_world/term_vector.hpp"
 		if (show_nsw_status)
 		{
 			TORRENT_ASSERT(cf_routing_tables.size() == ff_routing_tables.size());
@@ -1948,30 +1949,36 @@ int main(int argc, char* argv[])
 			{
 				std::vector<libtorrent::nsw::node_entry>& closest_friends = cf_it->second.second;
 				std::vector<libtorrent::nsw::node_entry>& far_friends = ff_it->second.second;
-
-				buf += "NSW node: id " + std::string(to_hex(cf_it->first).c_str()) + " descr " + cf_it->second.first + "\n";
-				pos += 1;
-
-
-				buf += "close friends (" + std::to_string(closest_friends.size()) + "):\n";
-				pos += 1;
+				std::unordered_map<std::string, double> descr_term_vector;
+				nsw::term_vector::makeTermVector(cf_it->second.first,descr_term_vector);
+				buf += "----------------------------------------------------------------------------------------------\n";
+				buf += "| NSW node | id: " + std::string(to_hex(cf_it->first).c_str()) + " | descr: " + cf_it->second.first + " |\n";
+				buf += "----------------------------------------------------------------------------------------------\n";
+				buf += "| close friends (" + std::to_string(closest_friends.size()) + "): |\n";
+				buf += "----------------------------------------------------------------------------------------------\n";
+				pos += 5;
 
 				for(auto n:closest_friends)
 				{
-					buf += "friend: " + std::string(to_hex(n.id).c_str()) + " term vector " + vectorToString(n.term_vector).substr(0,25) + "\n";
+					std::string simil_str = std::to_string(nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector));
+					buf += "|" +  simil_str + " | " + std::string(to_hex(n.id).c_str()) +
+								" | " + vectorToString(n.term_vector).substr(0,35) + "... |\n";
 					pos += 1;
 				}
-
-				buf += "far friends (" + std::to_string(far_friends.size()) + "):\n";;
-				pos += 1;
+				buf += "----------------------------------------------------------------------------------------------\n";
+				buf += "| far friends (" + std::to_string(far_friends.size()) + "): |\n";;
+				pos += 2;
 
 				for(auto n:far_friends)
 				{
-					buf += "friend: " + std::string(to_hex(n.id).c_str()) + " term vector " + vectorToString(n.term_vector).substr(0,25) + "\n";
+					std::string simil_str = std::to_string(nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector));
+					buf += "|" +  simil_str + " | " +  std::string(to_hex(n.id).c_str()) +
+								" | term vector " + vectorToString(n.term_vector).substr(0,35) + "... |\n";
 					pos += 1;
 				}
+				buf += "----------------------------------------------------------------------------------------------\n";
 				buf += "\n";
-				pos += 1;
+				pos += 2;
 			}
 
 			out += buf;

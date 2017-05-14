@@ -290,14 +290,14 @@ double term_vector::softCosineMeasure(const vector_t& textVec1, const vector_t& 
     return result > static_cast<double>(0.9999999)?1.0:result;
 }
 
-double term_vector::getVecSimilarity(const wvector_t& textVec1, const wvector_t& textVec2)
+TORRENT_EXTRA_EXPORT double term_vector::getVecSimilarity(const wvector_t& textVec1, const wvector_t& textVec2)
 {
     if(textVec1.empty() || textVec2.empty())
         return 0.0;
     return term_vector::hardCosineMeasure(textVec1, textVec2);
 }
 
-double term_vector::getVecSimilarity(const vector_t& textVec1, const vector_t& textVec2)
+TORRENT_EXTRA_EXPORT double term_vector::getVecSimilarity(const vector_t& textVec1, const vector_t& textVec2)
 {
     if(textVec1.empty() || textVec2.empty())
         return 0.0;
@@ -305,7 +305,7 @@ double term_vector::getVecSimilarity(const vector_t& textVec1, const vector_t& t
 }
 
 
-double term_vector::getSimilarity(const std::wstring& textString1, const std::wstring& textString2)
+TORRENT_EXTRA_EXPORT double term_vector::getSimilarity(const std::wstring& textString1, const std::wstring& textString2)
 {
     wvector_t textStringVec1;
     wvector_t textStringVec2;
@@ -314,7 +314,7 @@ double term_vector::getSimilarity(const std::wstring& textString1, const std::ws
                             makeTermVector(textString2,textStringVec2));
 }
 
-double term_vector::getSimilarity(const std::string& textString1, const std::string& textString2)
+TORRENT_EXTRA_EXPORT double term_vector::getSimilarity(const std::string& textString1, const std::string& textString2)
 {
 
     vector_t textStringVec1;
@@ -324,7 +324,7 @@ double term_vector::getSimilarity(const std::string& textString1, const std::str
                             makeTermVector(textString2,textStringVec2));
 }
 
-wvector_t& term_vector::makeTermVector(const std::wstring& textString, wvector_t& termVector)
+TORRENT_EXTRA_EXPORT wvector_t& term_vector::makeTermVector(const std::wstring& textString, wvector_t& termVector)
 {
     using w_tokenizer = boost::tokenizer<boost::char_separator<wchar_t>,
     std::wstring::const_iterator, std::wstring>;
@@ -360,7 +360,7 @@ wvector_t& term_vector::makeTermVector(const std::wstring& textString, wvector_t
     return termVector;
 }
 
-vector_t& term_vector::makeTermVector(const std::string& textString, vector_t& termVector)
+TORRENT_EXTRA_EXPORT vector_t& term_vector::makeTermVector(const std::string& textString, vector_t& termVector)
 {
     uint32_t wordCount = 0;
 
