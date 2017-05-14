@@ -261,7 +261,7 @@ struct TORRENT_EXPORT nsw_settings
 #ifndef TORRENT_NO_DEPRECATE
 			service_port(0)
 #endif
-			, max_fail_count(20)
+			, max_fail_count(10)
 			, item_lifetime(0)
 			, search_threads(2)
 		{}
