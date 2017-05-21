@@ -142,7 +142,8 @@ namespace libtorrent
 
 		udp::socket m_socket;
 
-		using receive_buffer = std::array<char, 1500>;
+		//increased from 1500 for NSW testing purposes
+		using receive_buffer = std::array<char, 2500>;
 		std::unique_ptr<receive_buffer> m_buf;
 
 		std::uint16_t m_bind_port;
