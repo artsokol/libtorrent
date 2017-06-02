@@ -2691,15 +2691,20 @@ namespace libtorrent
 		char const* type;
 		// the total number of requests that have timed out so far
 		// for this lookup
-		int timeouts;
+		//uint32_t timeouts;
 		// the total number of responses we have received for this
 		// lookup so far for this lookup
-		int responses;
-		int in_progress_requests;
+		//uint32_t responses;
+		//uint32_t in_progress_requests;
 		// the text target for this lookup
-		std::string target;
+		//std::string target;
+		std::unordered_map<std::string, double> target;
 		// the number of concurrent request
-		int threads;
+		std::int16_t threads;
+		// number of asked nodes before target has been reached
+		//std::int16_t hops;
+		// nodes which we got info about in requests
+		std::int16_t known_nodes;
 	};
 
 	// struct to hold information about a single NSW routing table
