@@ -192,6 +192,7 @@ std::vector<libtorrent::dht_routing_bucket> dht_routing_table;
 #ifndef TORRENT_DISABLE_NSW
 std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<libtorrent::nsw::node_entry> > > cf_routing_tables;
 std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<libtorrent::nsw::node_entry> > > ff_routing_tables;
+std::shared_ptr<std::vector<std::string> > query_result(new std::vector<std::string>);
 #endif
 
 torrent_view view;
@@ -1240,7 +1241,7 @@ int main(int argc, char* argv[])
 	settings.set_bool(settings_pack::enable_nsw, true);
 
 
-	int refresh_delay = 500;
+	int refresh_delay = 1500;
 	bool rate_limit_locals = false;
 
 	std::deque<std::string> events;
@@ -1778,6 +1779,19 @@ int main(int argc, char* argv[])
 					h.clear_error();
 				}
 
+				if (c == 'e')
+				{
+					std::cout << "Enter search query:" << std::endl;
+					std::string asked_string;
+					query_result.get()->clear();
+					query_result.get()->shrink_to_fit();
+					std::getline (std::cin,asked_string);
+
+					if(asked_string.length()>0)
+					{
+						ses.add_nsw_query(asked_string);
+					}
+				}
 				// toggle displays
 				if (c == 't') print_trackers = !print_trackers;
 				if (c == 'i') print_peers = !print_peers;
@@ -1830,7 +1844,7 @@ int main(int argc, char* argv[])
 						"[g] show DHT                                    [x] toggle disk cache stats\n"
 						"[t] show trackers                               [l] toggle show log\n"
 						"[P] show pad files (in file list)               [y] toggle show piece matrix\n"
-						"[n] show NSW \n"
+						"[N] show NSW                                    [e] rEad text query for node search\n"
 						"\n"
 						"COLUMN OPTIONS\n"
 						"[1] toggle IP column                            [2]\n"
@@ -1877,7 +1891,7 @@ int main(int argc, char* argv[])
 		torrent_handle h = view.get_active_handle();
 
 		cache_status cs;
-		ses.get_cache_info(&cs, h, cache_flags);
+		//ses.get_cache_info(&cs, h, cache_flags);
 
 #ifndef TORRENT_DISABLE_DHT
 		if (show_dht_status)
@@ -1962,8 +1976,10 @@ int main(int argc, char* argv[])
 
 				for(auto n:closest_friends)
 				{
-					std::string simil_str = std::to_string(nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector));
-					buf += "|" +  simil_str + " | " + std::string(to_hex(n.id).c_str()) +
+					std::stringstream ss;
+                	ss << std::fixed << std::setprecision(15) << nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector);
+
+					buf += "|" +  ss.str() + " | " + std::string(to_hex(n.id).c_str()) +
 								" | " + vectorToString(n.term_vector).substr(0,35) + "... |\n";
 					pos += 1;
 				}
@@ -1973,8 +1989,10 @@ int main(int argc, char* argv[])
 
 				for(auto n:far_friends)
 				{
-					std::string simil_str = std::to_string(nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector));
-					buf += "|" +  simil_str + " | " +  std::string(to_hex(n.id).c_str()) +
+					std::stringstream ss;
+                	ss << std::fixed << std::setprecision(15) << nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector);
+
+					buf += "|" +  ss.str() + " | " +  std::string(to_hex(n.id).c_str()) +
 								" | term vector " + vectorToString(n.term_vector).substr(0,35) + "... |\n";
 					pos += 1;
 				}
@@ -1982,6 +2000,17 @@ int main(int argc, char* argv[])
 				buf += "\n";
 				pos += 2;
 			}
+
+			// buf += "Query results:\n";
+			++pos;
+
+			//std::vector<std::string>& ref = query_result.get();
+			// ses.get_nsw_query_results(query_result, 3);
+			// for(auto q: *(query_result.get()))
+			// {
+			// 	buf += q.substr(0,140) + "...\n";
+			// 	++pos;
+			// }
 
 			out += buf;
 //			pos += 1;
