@@ -15,7 +15,9 @@ public:
 	bootstrap(node& nsw_node
         , node_id const& nid
         , vector_t const& target_text
-		, done_callback const& callback);
+        , done_callback const& callback
+        , data_callback const& result_callback
+        , bool exact = false);
 	virtual char const* name() const;
 
 	observer_ptr new_observer(udp::endpoint const& ep
@@ -30,6 +32,8 @@ protected:
 	virtual bool invoke(observer_ptr o);
 
 	virtual void done();
+private:
+    bool m_exact_search;
 
 };
 

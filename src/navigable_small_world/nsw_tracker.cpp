@@ -74,11 +74,6 @@ namespace libtorrent { namespace nsw {
 
 	void nsw_tracker::update_node_id()
 	{
-		// for_each(m_nodes.begin(),m_nodes.end(),[]
-		// 						(node_collection_t::value_type& table_item)
-		// 						{ table_item.second.get()->update_node_id(); });
-//		item.update_node_id();
-//		update_storage_node_ids();
 	}
 
 	void nsw_tracker::update_node_description(node& item, std::string const& new_descr)
@@ -201,12 +196,12 @@ namespace libtorrent { namespace nsw {
 
 	void nsw_tracker::get_friends(node& item, sha1_hash const& ih
 								, std::string const& target
-								, std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const&)> f)
+								, std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string, double>> const&)> f)
 	{
-		std::function<void(std::vector<std::pair<node_entry, std::string>> const&)> empty;
-		vector_t target_vec;
-		term_vector::makeTermVector(target,target_vec);
-		item.get_friends(ih, target_vec, f, empty);
+		// std::function<void(std::vector<std::pair<node_entry, std::string>> const&)> empty;
+		// vector_t target_vec;
+		// term_vector::makeTermVector(target,target_vec);
+		//item.get_friends(ih, target_vec, f, empty);
 	}
 
 //	namespace {
@@ -240,29 +235,6 @@ namespace libtorrent { namespace nsw {
 		if (buf_size <= 20
 			|| buf.front() != 'd'
 			|| buf.back() != 'e') return false;
-
-//		m_counters.inc_stats_counter(counters::nsw_bytes_in, buf_size);
-		// account for IP and UDP overhead
-//		m_counters.inc_stats_counter(counters::recv_ip_overhead_bytes
-//			, ep.address().is_v6() ? 48 : 28);
-//		m_counters.inc_stats_counter(counters::nsw_messages_in);
-
-// 		if (m_settings.ignore_dark_internet && ep.address().is_v4())
-// 		{
-// 			address_v4::bytes_type b = ep.address().to_v4().to_bytes();
-
-// 			// these are class A networks not available to the public
-// 			// if we receive messages from here, that seems suspicious
-// 			static std::uint8_t const class_a[] = { 3, 6, 7, 9, 11, 19, 21, 22, 25
-// 				, 26, 28, 29, 30, 33, 34, 48, 51, 56 };
-
-// 			if (std::find(std::begin(class_a), std::end(class_a), b[0]) != std::end(class_a))
-// 			{
-// //				m_counters.inc_stats_counter(counters::dht_messages_in_dropped);
-// 				return true;
-// 			}
-// 		}
-
 
 		TORRENT_ASSERT(buf_size > 0);
 
@@ -302,11 +274,11 @@ namespace libtorrent { namespace nsw {
 
 	namespace {
 
-	void add_node_fun(void* userdata, node_entry const& e)
-	{
-		(void*)userdata;
-		(void)e;
-	}
+	// void add_node_fun(void* userdata, node_entry const& e)
+	// {
+	// 	(void*)userdata;
+	// 	(void)e;
+	// }
 
 	std::vector<udp::endpoint> save_nodes(node const& nsw)
 	{
@@ -380,10 +352,14 @@ namespace libtorrent { namespace nsw {
 
 	}
 
-	// bool nsw_tracker::has_quota()
-	// {
-	// 	return false;
-	// }
+	void nsw_tracker::nsw_query(std::string const&  query)
+	{
+		vector_t query_vec;
+		term_vector::makeTermVector(query,query_vec);
+		for_each(m_nodes.begin(),m_nodes.end(),[this, &query_vec]
+										(node_collection_t::value_type& table_item)
+										{ table_item.second.get()->nsw_query(/*self(), */query_vec); });
+	}
 
 	bool nsw_tracker::send_packet(entry& e, udp::endpoint const& addr)
 	{
@@ -418,6 +394,20 @@ namespace libtorrent { namespace nsw {
 		m_log->nsw_log_packet(nsw_logger_interface::outgoing_message, m_send_buf, addr);
 #endif
 		return true;
+	}
+
+	void nsw_tracker::handle_query_results(std::shared_ptr<std::vector<std::string> > out, unsigned int count)
+	{
+		for_each(m_nodes.begin(),m_nodes.end(),[this, &out]
+										(node_collection_t::value_type& table_item)
+										{
+										  std::vector<std::string> tmp;
+										  table_item.second.get()->get_query_result(tmp);
+										  out.get()->insert(out.get()->end(),tmp.begin(),tmp.end());
+										 });
+
+		if(out.get()->size() > count)
+			out.get()->resize(count);
 	}
 
 }}

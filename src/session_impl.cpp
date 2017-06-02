@@ -5939,24 +5939,15 @@ namespace aux {
 		m_nsw_settings = settings;
 	}
 
-	// void session_impl::add_nsw_node_name(/*std::pair<std::string, int> const& node, */std::string const& descr)
-	// {
-	// 	// error_code ec;
-	// 	// address ip = address::from_string(node.first.c_str(), ec);
-	// 	// if (!ec)
-	// 	// {
-	// 	// 	udp::endpoint ep(ip, std::uint16_t(node.second));
-	// 		m_nsw_nodes.push_back(descr);//make_pair(ep, descr));
-	// 	// }
-	// 	// else
-	// 	// 	return;
-	// }
+	void session_impl::add_nsw_query(std::string const&  query)
+	{
+		m_nsw->nsw_query(query);
+	}
 
-	// void session_impl::on_nsw_name_lookup(error_code const& e
-	// 	, std::vector<address> const& addresses, int port)
-	// {
-
-	// }
+	void session_impl::get_nsw_query_results(std::shared_ptr<std::vector<std::string> > out, unsigned int count)
+	{
+		m_nsw->handle_query_results(out, count);
+	}
 
 	void session_impl::add_nsw_gate(std::tuple<std::string, int, std::string> const& node)
 	{

@@ -77,73 +77,16 @@ void traversal_algorithm::add_entry(node_id const& id
 		done();
 		return;
 	}
-	// if (id.is_all_zeros())
-	// {
-	// 	o->set_id(generate_random_id());
-	// 	o->flags |= observer_interface::flag_no_id;
-	// }
 
 	o->flags |= flags;
 
-	// TORRENT_ASSERT(libtorrent::nsw::is_sorted(m_results.begin(), m_results.end()
-	// 	, [this](observer_ptr const& lhs, observer_ptr const& rhs)
-	// 	{ return compare_ref(lhs->id(), rhs->id(), m_target); }));
+	// auto iter = std::find_if(m_results.begin(), m_results.end()
+	// 			, [this,&description](observer_ptr const& lhs)
+	// 			{ return term_vector::getVecSimilarity(lhs->descr(),m_node.m_table.get_descr()) <
+	// 				term_vector::getVecSimilarity(description,m_node.m_table.get_descr()); });
 
-	// auto iter = std::lower_bound(m_results.begin(), m_results.end(), o
-	// 	, [this](observer_ptr const& lhs, observer_ptr const& rhs)
-	// 	{ return compare_ref(lhs->id(), rhs->id(), m_target); });
-	auto iter = std::find_if(m_results.begin(), m_results.end()
-				, [this,&description](observer_ptr const& lhs)
-				{ return term_vector::getVecSimilarity(lhs->descr(),m_node.m_table.get_descr()) <
-					term_vector::getVecSimilarity(description,m_node.m_table.get_descr()); });
-
-	if (iter == m_results.end() || (*iter)->id() != id) /// check text description?
-	{
-// 		if (m_node.settings().restrict_search_ips
-// 			&& !(flags & observer_interface::flag_initial))
-// 		{
-// #if TORRENT_USE_IPV6
-// 			if (o->target_addr().is_v6())
-// 			{
-// 				address_v6::bytes_type addr_bytes = o->target_addr().to_v6().to_bytes();
-// 				address_v6::bytes_type::const_iterator prefix_it = addr_bytes.begin();
-// 				std::uint64_t const prefix6 = detail::read_uint64(prefix_it);
-
-// 				if (m_peer6_prefixes.insert(prefix6).second)
-// 					goto add_result;
-// 			}
-// 			else
-// #endif
-// 			{
-// 				// mask the lower octet
-// 				std::uint32_t const prefix4
-// 					= o->target_addr().to_v4().to_ulong() & 0xffffff00;
-
-// 				if (m_peer4_prefixes.insert(prefix4).second)
-// 					goto add_result;
-// 			}
-
-// 			// we already have a node in this search with an IP very
-// 			// close to this one. We know that it's not the same, because
-// 			// it claims a different node-ID. Ignore this to avoid attacks
-// #ifndef TORRENT_DISABLE_LOGGING
-// 			nsw_logger_observer_interface* logger = get_node().observer();
-// 			if (logger != nullptr && logger->should_log(nsw_logger_interface::traversal))
-// 			{
-// 				logger->nsw_log(nsw_logger_interface::traversal
-// 					, "[%u] traversal DUPLICATE node. id: %s addr: %s type: %s"
-// 					, m_id, aux::to_hex(o->id()).c_str(), print_address(o->target_addr()).c_str(), name());
-// 			}
-// #endif
-// 			return;
-// 		}
-
-// 	add_result:
-
-		// TORRENT_ASSERT((o->flags & observer_interface::flag_no_id)
-		// 	|| std::none_of(m_results.begin(), m_results.end()
-		// 	, [&id](observer_ptr const& ob) { return ob->id() == id; }));
-
+	// if (iter == m_results.end() || (*iter)->id() != id) /// check text description?
+	// {
 #ifndef TORRENT_DISABLE_LOGGING
 		nsw_logger_observer_interface* logger = get_node().observer();
 		if (logger != nullptr && logger->should_log(nsw_logger_interface::traversal))
@@ -154,13 +97,9 @@ void traversal_algorithm::add_entry(node_id const& id
 				, m_invoke_count, name());
 		}
 #endif
-		// --iter;
-		// iter = m_results.insert(iter, o);
+
 		m_results.push_back(o);
-		// TORRENT_ASSERT(libtorrent::dht::is_sorted(m_results.begin(), m_results.end()
-		// 	, [this](observer_ptr const& lhs, observer_ptr const& rhs)
-		// 	{ return compare_ref(lhs->id(), rhs->id(), m_target); }));
-	}
+	// }
 
 	if (m_results.size() > 100)
 	{
@@ -186,7 +125,7 @@ void traversal_algorithm::start()
 {
 	// in case the routing table is empty, use the
 	// router nodes in the table
-	if (m_results.size() < 3) add_gate_entries();
+	if (m_results.size() < 1) add_gate_entries();
 	init();
 	bool is_done = add_requests();
 	if (is_done) done();
@@ -228,8 +167,8 @@ void traversal_algorithm::finished(observer_ptr o)
 
 	++m_responses;
 	--m_invoke_count;
-	bool is_done = add_requests();
-	if (is_done) done();
+	//bool is_done = add_requests();
+	//if (is_done) done();
 }
 
 // prevent request means that the total number of requests has
@@ -341,6 +280,9 @@ void traversal_algorithm::done()
 
 	// delete all our references to the observer objects so
 	// they will in turn release the traversal algorithm
+	// ++m_responses;
+	// --m_invoke_count;
+	// if(m_invoke_count ==  0)
 	m_results.clear();
 	m_invoke_count = 0;
 }
@@ -371,8 +313,8 @@ bool traversal_algorithm::add_requests()
 	// but is intended to speed up lookups
 	for (std::vector<observer_ptr>::iterator i = m_results.begin()
 		, end(m_results.end()); i != end
-		&& results_target > 0
-		&& (m_invoke_count < m_max_threads);
+		/*&& results_target > 0
+		&& (m_invoke_count < m_max_threads)*/;
 		++i)
 	{
 		observer_interface* o = i->get();
@@ -391,19 +333,19 @@ bool traversal_algorithm::add_requests()
 			continue;
 		}
 
-#ifndef TORRENT_DISABLE_LOGGING
-		nsw_logger_observer_interface* logger = get_node().observer();
-		if (logger != nullptr && logger->should_log(nsw_logger_interface::traversal))
-		{
-			logger->nsw_log(nsw_logger_interface::traversal
-				, "[%u] INVOKE nodes-left: %d top-invoke-count: %d "
-				"invoke-count: %d branch-factor: %d "
-				"id: %s addr: %s type: %s"
-				, m_id, int(m_results.end() - i), outstanding, int(m_invoke_count)
-				, int(m_max_threads), aux::to_hex(o->id()).c_str()
-				, print_address(o->target_addr()).c_str(), name());
-		}
-#endif
+// #ifndef TORRENT_DISABLE_LOGGING
+// 		nsw_logger_observer_interface* logger = get_node().observer();
+// 		if (logger != nullptr && logger->should_log(nsw_logger_interface::traversal))
+// 		{
+// 			logger->nsw_log(nsw_logger_interface::traversal
+// 				, "[%u] INVOKE nodes-left: %d top-invoke-count: %d "
+// 				"invoke-count: %d branch-factor: %d "
+// 				"id: %s addr: %s type: %s"
+// 				, m_id, int(m_results.end() - i), outstanding, int(m_invoke_count)
+// 				, int(m_max_threads), aux::to_hex(o->id()).c_str()
+// 				, print_address(o->target_addr()).c_str(), name());
+// 		}
+// #endif
 
 		o->flags |= observer_interface::flag_queried;
 		if (invoke(*i))
@@ -454,11 +396,14 @@ traversal_algorithm::~traversal_algorithm()
 
 void traversal_algorithm::status(nsw_lookup& l)
 {
-	l.timeouts = m_timeouts;
-	l.responses = m_responses;
-	l.in_progress_requests = m_invoke_count;
+	//l.timeouts = m_timeouts;
+	//l.responses = m_responses;
+	//l.in_progress_requests = m_invoke_count;
 	l.threads = m_max_threads;
 	l.type = name();
+	l.target = m_target;
+	//l.hops = 0;
+	l.known_nodes = m_retrieved_nodes;
 	//l.nodes_left = 0;
 	//l.first_timeout = 0;
 	//l.target = m_target;

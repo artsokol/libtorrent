@@ -2,6 +2,7 @@
 #define TORRENT_NSW_TRACKER_HPP
 
 #include <functional>
+#include <mutex>          // std::mutex
 
 #include "libtorrent/navigable_small_world/node.hpp"
 #include "libtorrent/navigable_small_world/nsw_state.hpp"
@@ -67,7 +68,8 @@ private:
 		time_point m_last_tick;
 		io_service& m_io_srv;
 		const find_data::nodes_callback* m_current_callback;
-//		bool m_is_gateway_mode;
+
+		std::mutex m_query_processing_mutex;
 
 public:
 
@@ -88,14 +90,15 @@ public:
 
 		void add_node(sha1_hash const& nid, std::string const& description);
 		void add_gate_node(udp::endpoint const& node, std::string const& description);
-
+		void nsw_query(std::string const&  query);
+		void handle_query_results(std::shared_ptr<std::vector<std::string> > out, unsigned int count);
 		nsw_state state() const;
 
 		enum flags_t { flag_seed = 1, flag_implied_port = 2 };
 		void get_friends(node& item
 			, sha1_hash const& ih
 			, std::string const& target
-			, std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const&)> f);
+			, std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string, double>> const&)> f);
 		// void announce(sha1_hash const& ih, int listen_port, int flags
 		// 	, std::function<void(std::vector<tcp::endpoint> const&)> f);
 

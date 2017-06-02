@@ -24,6 +24,7 @@
 #include "libtorrent/kademlia/io.hpp"
 
 #include "libtorrent/navigable_small_world/node.hpp"
+#include "libtorrent/navigable_small_world/nsw_tracker.hpp"
 #include "libtorrent/navigable_small_world/bootstrap.hpp"
 #include "libtorrent/navigable_small_world/nsw_logger_observer_interface.hpp"
 #include "libtorrent/navigable_small_world/term_vector.hpp"
@@ -80,6 +81,7 @@ node::node(udp proto, udp_socket_interface* sock
 	, m_last_self_refresh(min_time())
 	, m_sock(sock)
 	, m_counters(cnt)
+	, m_is_query_running(false)
 {
 	m_secret[0] = random(~0);
 	m_secret[1] = random(~0);
@@ -179,13 +181,12 @@ void node::status(std::vector<node_entry>& cf_table
 void node::bootstrap(/*std::vector<udp::endpoint> const& nodes,*/
 		find_data::nodes_callback const& f)
 {
-	node_id nid = m_id;
-//	make_id_secret(target);
-
 	auto r = std::make_shared<nsw::bootstrap>(*this
 											, m_id
 											, m_table.get_descr()
-											, f);
+											, f
+											, std::bind(&node::add_friend_engine, this, _1, _2));
+
 	m_last_self_refresh = aux::time_now();
 
 #ifndef TORRENT_DISABLE_LOGGING
@@ -219,6 +220,75 @@ void node::bootstrap(/*std::vector<udp::endpoint> const& nodes,*/
 #endif
 	r->start();
 
+}
+
+void node::nsw_query(vector_t& query_vec)
+{
+	// check if we most similar to query
+	if(m_is_query_running)
+		return;
+
+	m_is_query_running = true;
+	m_query_results.clear();
+
+	std::vector<node_entry> closest_friends;
+	m_table.find_node(query_vec, closest_friends, m_table.neighbourhood_size());
+
+	double similarity_with_me = term_vector::getVecSimilarity(m_table.get_descr(), query_vec);
+	double best_friend_similarity = (closest_friends.size() >0) ?
+							term_vector::getVecSimilarity(closest_friends.front().term_vector, query_vec):
+							0.0;
+
+	if (best_friend_similarity < similarity_with_me)
+	{
+		std::lock_guard<std::mutex> l(m_mutex);
+		vector_t description_vec;
+		term_vector::makeTermVector(m_description,description_vec);
+		m_query_results.insert(std::make_pair(term_vector::getVecSimilarity(query_vec,description_vec), m_description));
+		return;
+	}
+
+	auto finalization_actions = [this](
+			std::vector<std::pair<nsw::node_entry, std::string>> const&)
+		{
+		};
+
+	auto r = std::make_shared<nsw::bootstrap>(*this
+											, m_id
+											, query_vec
+											, finalization_actions
+											, std::bind(&node::nsw_query_engine, this, _1, _2)
+											, true);
+	m_last_self_refresh = aux::time_now();
+
+#ifndef TORRENT_DISABLE_LOGGING
+	int count = 0;
+#endif
+	//add closest friends
+	for_each(m_table.neighbourhood().begin(),m_table.neighbourhood().end(),[this, &r, &count]
+										(const node_entry& n)
+									{
+								#ifndef TORRENT_DISABLE_LOGGING
+											++count;
+								#endif
+											r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial);
+									});
+	//add old friends
+	for_each(m_table.old_relations().begin(),m_table.old_relations().end(),[this, &r, &count]
+										(const node_entry& n)
+									{
+								#ifndef TORRENT_DISABLE_LOGGING
+											++count;
+								#endif
+											r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial);
+									});
+
+
+#ifndef TORRENT_DISABLE_LOGGING
+	if (m_observer != nullptr)
+		m_observer->nsw_log(nsw_logger_interface::node, "query %s with %d nodes", term_vector::vectorToString(query_vec).c_str(), count);
+#endif
+	r->start();
 }
 
 void node::new_write_key()
@@ -338,22 +408,21 @@ void node::add_node(udp::endpoint const& node, node_id const& id)
 	if (!native_address(node)) return;
 	// ping the node, and if we get a reply, it
 	// will be added to the routing table
+
 	send_ping(node, id);
-
-
 	//m_table.add_node(node);
 }
 
-void node::get_friends(sha1_hash const& info_hash
-		, vector_t const& target
-		, std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const&)> dcallback
-		, std::function<void(std::vector<std::pair<node_entry, std::string>> const&)> ncallback)
-{
-	// search for nodes with text close to our.
-	auto ta = std::make_shared<nsw::get_friends>(*this, target, dcallback, ncallback);
+// void node::get_friends(sha1_hash const& info_hash
+// 		, vector_t const& target
+// 		, std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string, double>> const&)> dcallback
+// 		, std::function<void(std::vector<std::pair<node_entry, std::string>> const&)> ncallback)
+// {
+// 	// search for nodes with text close to our.
+// 	auto ta = std::make_shared<nsw::get_friends>(*this, target, dcallback, ncallback);
 
-	ta->start();
-}
+// 	ta->start();
+// }
 
 void node::add_friend(sha1_hash const& info_hash, int listen_port, int flags
 		, std::function<void(std::vector<tcp::endpoint> const&)> f)
@@ -479,8 +548,8 @@ entry write_nodes_entry(std::vector<node_entry> const& closest_nodes
 		std::copy(n.id.begin(), n.id.end(), out_itr);
 
 		double similarity = term_vector::getVecSimilarity(n.term_vector, requested_vec);
-        std::string similarity_str = std::to_string(similarity);
-        std::copy(similarity_str.begin()+2, similarity_str.begin()+9, out_itr);
+        //std::string similarity_str = std::to_string(similarity);
+        std::copy((char*)&similarity, (char*)&similarity+sizeof(double), out_itr);
 
 		detail::write_endpoint(udp::endpoint(n.addr(), std::uint16_t(n.port())), out_itr);
 
@@ -624,6 +693,31 @@ void node::incoming_request(msg const& m, entry& e)
 
 		//m_table.node_seen(id, m.addr, 0xffff);
 	}
+	else if (query == "search_query")
+	{
+		key_desc_t const msg_desc[] = {
+			{"token", bdecode_node::string_t, 0, 0},
+		};
+
+		bdecode_node search_query_attributes[1];
+
+		if (!verify_message(arg_ent, msg_desc, search_query_attributes, error_string))
+		{
+			incoming_error(e, error_string);
+			return;
+		}
+
+
+		if (!verify_token(search_query_attributes[0].string_value()
+		 	, sha1_hash(top_level[2].string_ptr()), m.addr))
+		{
+			incoming_error(e, "invalid token");
+			return;
+		}
+
+		reply["description"] = m_description;
+		//term_vector::vectorToEntry(m_table.get_descr(),term_vec);
+	}
 	else
 	{
 		incoming_error(e, "unknown message");
@@ -650,8 +744,7 @@ void node::write_nodes_entries(bdecode_node const& want, entry& r)
 
 	term_vector::bencodeToVector(want,got_vector);
 
-	std::vector<node_entry> closest_friends;// = m_table.neighbourhood();
-	std::vector<double> similarity_with_friends;
+	std::vector<node_entry> closest_friends;
 
 	m_table.find_node(got_vector, closest_friends, m_table.neighbourhood_size());
 
@@ -662,11 +755,9 @@ void node::write_nodes_entries(bdecode_node const& want, entry& r)
 
 	if (best_friend_similarity < similarity_with_me)
 	{
-		std::stringstream ss;
-        ss << std::fixed << std::setprecision(7) << similarity_with_me;
-       	std::string mantissa_str = ss.str();
-
-		r["me"] = mantissa_str.substr(2,7);;
+        char buf[sizeof(double)+1] = {0};
+        std::memcpy(buf, &similarity_with_me, sizeof(double));
+		r["me"] = buf;
 	}
 
 	entry& friends_vec = r["friends"];
@@ -696,26 +787,19 @@ node::protocol_descriptor const& node::map_protocol_to_descriptor(udp protocol)
 }
 
 
-void add_friend_engine(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const& v, node& node)
+void node::add_friend_engine(traversal_algorithm::callback_data_t const& v, nsw_lookup const& stat)
 {
-#ifndef TORRENT_DISABLE_LOGGING
-		auto logger = node.observer();
-		if (logger != nullptr && logger->should_log(nsw_logger_interface::node))
-		{
-			logger->nsw_log(nsw_logger_interface::node, "sending add_friend");
-		}
-#endif
 	// create a dummy traversal_algorithm
-	auto algo = std::make_shared<traversal_algorithm>(node, node.nid(), node.descr_vec());
+	auto algo = std::make_shared<traversal_algorithm>(*this, nid(), descr_vec());
 	// store on the first k nodes
 	for (auto const& p : v)
 	{
 
 
-		auto o = node.m_rpc.allocate_observer<add_friend_observer>(algo
+		auto o = m_rpc.allocate_observer<add_friend_observer>(algo
 														, std::get<1>(p)
 														, std::get<0>(p)
-														, node.descr_vec());
+														, descr_vec());
 		if (!o) return;
 		entry e;
 		e["y"] = "q";
@@ -726,10 +810,52 @@ void add_friend_engine(std::vector<std::tuple<node_id, udp::endpoint, std::strin
 		a["token"] = std::get<2>(p);
 		a["r_id"] = std::get<0>(p).to_string();
 		entry& term_vec = a["description"];
-		term_vector::vectorToEntry(node.descr_vec(),term_vec);
+		term_vector::vectorToEntry(descr_vec(),term_vec);
 
 		std::string fake;
-		node.m_rpc.invoke(e, std::get<1>(p), o, fake);
+		m_rpc.invoke(e, std::get<1>(p), o, fake);
+	}
+}
+
+void node::nsw_query_engine(traversal_algorithm::callback_data_t const& v, nsw_lookup const& common_stat)
+{
+	m_last_query_stat = common_stat;
+
+	// auto finalization_actions = [this](
+	// 		std::vector<std::pair<nsw::node_entry, std::string>> const&)
+	// 	{
+	// 		m_is_query_running = false;
+	// 		std::ofstream dump_file;
+	// 		dump_file.open("search_result.txt", std::ofstream::out | std::ofstream::app);
+	// 		dump_file << std::endl;
+	// 		dump_file << "\t\t### nodeID " << aux::to_hex(m_id).c_str() << " ###";
+	// 		dump_query_result(dump_file);
+	// 		dump_file.close();
+	// 	};
+
+	auto algo = std::make_shared<traversal_algorithm>(*this, nid()
+													, descr_vec());
+	m_search_routines = v.size();
+
+	for (auto const& p : v)
+	{
+
+		auto o = m_rpc.allocate_observer<search_query_observer>(algo
+														, std::get<1>(p)
+														, std::get<0>(p)
+														, descr_vec());
+
+		if (!o) return;
+		entry e;
+		e["y"] = "q";
+		e["q"] = "search_query";
+
+		entry& a = e["a"];
+		a["port"] = std::get<1>(p).port();
+		a["token"] = std::get<2>(p);
+		a["r_id"] = std::get<0>(p).to_string();
+		std::string fake;
+		m_rpc.invoke(e, std::get<1>(p), o, fake);
 	}
 }
 
@@ -761,6 +887,89 @@ void add_friend_observer::reply(libtorrent::nsw::msg const& m)
 															, friend_descr
 															, ~0
 															, true));
+	flags |= flag_done;
+}
+
+void search_query_observer::reply(libtorrent::nsw::msg const& m)
+{
+
+	bdecode_node r = m.message.dict_find_dict("r");
+	if (!r)
+	{
+#ifndef TORRENT_DISABLE_LOGGING
+		get_observer()->nsw_log(nsw_logger_interface::traversal, "[%u] missing response dict"
+			, algorithm()->id());
+#endif
+		timeout();
+		return;
+	}
+
+	bdecode_node q_id = r.dict_find_string("q_id");
+
+	node_id querying_id(q_id.string_ptr());
+
+	bdecode_node received_description = r.dict_find_string("description");
+
+	std::string description_str(received_description.string_ptr(),received_description.string_length());
+
+	vector_t description_vec;
+	term_vector::makeTermVector(description_str,description_vec);
+	algorithm()->get_node().handle_nsw_query_result(description_str
+						, term_vector::getVecSimilarity(algorithm()->get_node().get_stat().target,description_vec));
+	//m_out_container.get()->push_back(description_str);
+	//m_callback(description_str);
+	flags |= flag_done;
+}
+
+void node::handle_nsw_query_result(std::string& result, double similarity_with_query)
+{
+	std::lock_guard<std::mutex> l(m_mutex);
+	--m_search_routines;
+	auto existed_result = m_query_results.find(similarity_with_query);
+
+	if(existed_result == m_query_results.end())
+		m_query_results.insert(std::make_pair(similarity_with_query,result));
+
+	// for debugging purposes
+	if(!m_search_routines)
+	{
+		m_is_query_running = false;
+		std::ofstream dump_file;
+		dump_file.open("search_result.txt", std::ofstream::out | std::ofstream::app);
+		dump_file << std::endl;
+		dump_file << "\t\t### nodeID " << aux::to_hex(m_id).c_str() << " ###\n";
+		dump_query_result(dump_file);
+		dump_file.close();
+	}
+}
+
+void node::get_query_result(std::vector<std::string>& results_copy)
+{
+	if(!m_is_query_running)
+	{
+		std::for_each(m_query_results.begin()
+					, m_query_results.end()
+					, [&results_copy](std::pair<double, std::string> const& item)
+						{
+							results_copy.push_back("simil:" + std::to_string(item.first) + "| "+ item.second);
+						});
+	}
+}
+
+void node::dump_query_result(std::ofstream& dump_file)
+{
+	if(!m_is_query_running)
+	{
+		std::for_each(m_query_results.begin()
+					, m_query_results.end()
+					, [&dump_file, this](std::pair<double, std::string> const& item)
+						{
+							std::stringstream ss;
+                			ss << std::fixed << std::setprecision(15) << item.first;
+							dump_file << "simil:" + ss.str() + " | metrics: " +  std::to_string(m_last_query_stat.known_nodes) + " | " + item.second;
+							dump_file << std::endl;
+						});
+	}
 }
 
 } }

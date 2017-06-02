@@ -283,7 +283,7 @@ routing_table::add_node_status_t routing_table::add_friend_impl(node_entry e)
 	}
 	//TODO: add checking of size for m_close_nodes_rt
 
-	if( m_close_nodes_rt.size() > m_neighbourhood_size &&
+	if( m_close_nodes_rt.size() == m_neighbourhood_size &&
 		term_vector::getVecSimilarity(m_close_nodes_rt.back().term_vector,m_description_vec) >
 		term_vector::getVecSimilarity(e.term_vector,m_description_vec))
 	{
@@ -304,52 +304,35 @@ routing_table::add_node_status_t routing_table::add_friend_impl(node_entry e)
 		// 												[](node_entry const& e)
 		// 													{ return ne.pinged() == false;)
 
-		if (e.pinged() && e.fail_count() == 0
-			&& m_replacement_nodes.find(e) == m_replacement_nodes.end())
-		{
-			// if the node we're trying to insert is considered pinged,
-			// we may replace other nodes that aren't pinged
-			routing_table_t::reverse_iterator k = std::find_if(m_close_nodes_rt.rbegin(),
-															m_close_nodes_rt.rend(),
-															[](node_entry const& ne)
-															{ return ne.pinged() == false; });
+// 		if (e.pinged() && e.fail_count() == 0
+// 			&& m_replacement_nodes.find(e) == m_replacement_nodes.end())
+// 		{
+// 			// if the node we're trying to insert is considered pinged,
+// 			// we may replace other nodes that aren't pinged
+// 			routing_table_t::reverse_iterator k = std::find_if(m_close_nodes_rt.rbegin(),
+// 															m_close_nodes_rt.rend(),
+// 															[](node_entry const& ne)
+// 															{ return ne.pinged() == false; });
 
-			if (k != m_close_nodes_rt.rend() && !k->pinged())
-			{
-				// j points to a node that has not been pinged.
-				// Replace it with this new one
-				*k = e;
-				sort(m_close_nodes_rt.begin(), m_close_nodes_rt.end(),
-					[&e](node_entry const& a,node_entry const& b) -> bool
-					{
-						return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
-									term_vector::getVecSimilarity(b.term_vector,e.term_vector);
-					});
+// 			if (k != m_close_nodes_rt.rend() && !k->pinged())
+// 			{
+// 				// j points to a node that has not been pinged.
+// 				// Replace it with this new one
+// 				*k = e;
+// 				sort(m_close_nodes_rt.begin(), m_close_nodes_rt.end(),
+// 					[&e](node_entry const& a,node_entry const& b) -> bool
+// 					{
+// 						return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
+// 									term_vector::getVecSimilarity(b.term_vector,e.term_vector);
+// 					});
 
-#ifndef TORRENT_DISABLE_LOGGING
-				log_node_added(*k);
-#endif
-				return node_added;
-			}
+// #ifndef TORRENT_DISABLE_LOGGING
+// 				log_node_added(*k);
+// #endif
+// 				return node_added;
+// 			}
 
-			// A node is considered stale if it has failed at least one
-			// time. Here we choose the node that has failed most times.
-			// If we don't find one, place this node in the replacement-
-			// cache and replace any nodes that will fail in the future
-			// with nodes from that cache.
-
-			// j = std::max_element(m_close_nodes_rt.begin(), m_close_nodes_rt.end()
-			// 	, [](node_entry const& lhs, node_entry const& rhs)
-			// 	{ return lhs.fail_count() < rhs.fail_count(); });
-
-			// if (j->fail_count() > 0)
-			// {
-			// 	*j = e;
-			// 	sort(m_close_nodes_rt);
-			// 	return node_added;
-			// }
-
-		}
+// 		}
 		return failed_to_add;
 	} // getSimilarity
 
@@ -629,7 +612,7 @@ void routing_table::add_gate_node(udp::endpoint const& router, vector_t const& d
 {
 	auto existed_gate = std::find_if(m_gate_nodes.begin(),m_gate_nodes.end(),[&description]
 														(std::pair<vector_t, udp::endpoint> const& item)
-														{ return term_vector::getVecSimilarity(description,item.first) == 1;});
+														{ return term_vector::getVecSimilarity(description,item.first) == 1.0;});
 	if (existed_gate == m_gate_nodes.end())
 		m_gate_nodes.push_back(std::make_pair(description, router));
 }

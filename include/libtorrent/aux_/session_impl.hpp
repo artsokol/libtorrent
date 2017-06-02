@@ -670,6 +670,8 @@ namespace libtorrent
 
 			//void add_nsw_node_name(/*std::pair<std::string, int> const& node, */std::string const&  descr);
 			void add_nsw_node(sha1_hash const& nid, std::string const&  descr) override;
+			void add_nsw_query(std::string const&  query);
+			void get_nsw_query_results(std::shared_ptr<std::vector<std::string> > out, unsigned int count);
 			void add_nsw_gate(std::tuple<std::string, int, std::string> const& node);
 			// void on_nsw_gate_lookup(error_code const& e
 			// 	, std::vector<address> const& addresses, int port, std::string& descr);

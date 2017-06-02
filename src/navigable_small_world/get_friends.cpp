@@ -27,22 +27,21 @@ void get_friends_observer::reply(msg const& m)
 		timeout();
 		return;
 	}
-
+	algorithm()->increase_visited();
 	bdecode_node q_id = r.dict_find_string("q_id");
 
 	//if(q_id)
 	node_id checked_id(q_id.string_ptr());
+
+//	std::lock_guard<std::mutex> l(m_mutex);
 
 	auto checked_friend = std::find_if(algo_ptr->candidates.begin(),algo_ptr->candidates.end(),[&checked_id](get_friends::row const& item)
 																				{return checked_id == item.id;});
 	if(checked_friend == algo_ptr->candidates.end())
 	{
 		//possibly it is a gate and it had id = 0
-
-		//int tr_id = algo_ptr->get_node().m_table.get_my_transaction_id(this);
 		checked_friend = std::find_if(algo_ptr->candidates.begin(),algo_ptr->candidates.end(),[&transaction](get_friends::row const& item)
 																				{return transaction == item.transaction_id;});
-
 	}
 
 
@@ -50,15 +49,16 @@ void get_friends_observer::reply(msg const& m)
 
 	get_friends::row tmp(*checked_friend);
 
-	bdecode_node me = r.dict_find_int("me");
+	bdecode_node me = r.dict_find_string("me");
 	if (me)
 	{
-		std::string received_num_str =  "0." + std::string(me.string_value());
-		tmp.simil = std::stod(received_num_str);
+		double term_value = 0.0;
+        std::memcpy(&term_value, std::string(me.string_value()).c_str(), sizeof(double));
+		tmp.simil = term_value;
 		// add for add_friend algorithm()->
 	}
 
- 	tmp.is_visited = true;
+ 	tmp.visit_status = get_friends::row::visited;
  	if(tmp.id.is_all_zeros())
  		tmp.id = checked_id;
 
@@ -70,7 +70,8 @@ void get_friends_observer::reply(msg const& m)
 
 	algo_ptr->candidates.erase(checked_friend);
 	algo_ptr->candidates.insert(tmp);
-	algo_ptr->friend_list.insert(tmp);
+	if(exact_search && me || !exact_search)
+		algo_ptr->friend_list.insert(tmp);
 
 
 	// look for friends
@@ -91,32 +92,21 @@ void get_friends_observer::reply(msg const& m)
 			{
 				continue;
 			}
+			else if(node.id == algo_ptr->get_node().nid())
+			{
+				// some one have rocemmented us
+				// leave as separate case for future actions
+				continue;
+			}
 			else
 			{
-				algo_ptr->candidates.emplace(node.id,node.ep,"","",node.similarity,false);
+				algo_ptr->candidates.emplace(node.id,node.ep,"","",node.similarity,get_friends::row::not_visited,tmp.generation+1);
 			}
 		}
 	}
 
-
-
 	algo_ptr->got_friends();
 	find_data_observer::reply(m);
-
-			//static_cast<get_friends*>(algorithm())->invoke(next_observer);
-
-
-			//static_cast<get_friends*>(algorithm())->friend_list.emplace(friend_id,addr,similarity,false);
-			//add_entry(friend_id, addr, similarity, observer_interface::flag_initial);
-		//}
-
-// #ifndef TORRENT_DISABLE_LOGGING
-// 			log_friends(m, r, n.list_size());
-// #endif
-
-	//}
-
-
 }
 
 #ifndef TORRENT_DISABLE_LOGGING
@@ -140,32 +130,41 @@ void get_friends_observer::log_friends(msg const& m, bdecode_node const& r, int 
 			}
 }
 #endif
-void get_friends::got_friends(/*std::multimap<double, tcp::endpoint> const& friends*/)
+void get_friends::got_friends()
 {
+	//bad practice. need to implement as low granulate locks
+	std::lock_guard<std::mutex> l(m_mutex);
+
 	if(!appropriate_candidate_exists()
 		|| candidates.empty())
 	{
 
-		std::vector<std::tuple<node_id, udp::endpoint, std::string>> callback_data;
+		get_friends::callback_data_t callback_data;
 
 		std::for_each(friend_list.begin(), friend_list.end(), [&callback_data](row const& item)
-										{callback_data.push_back(std::make_tuple(item.id, item.addr, item.token)); }
-										);
+										{
+											callback_data.push_back(std::make_tuple(item.id
+																					, item.addr
+																					, item.token
+																					, item.simil
+																					, item.generation));
+										});
+		if (invoke_count() == 1 && m_data_callback)
+		{
+			nsw_lookup common_statistic;
+			status(common_statistic);
 
-		if (m_data_callback) m_data_callback(callback_data);
-		traversal_algorithm::done();
+			m_data_callback(callback_data,common_statistic);
+			find_data::done();
+		}
 	}
 	else
 	{
 		auto next_candidate = std::find_if(candidates.begin(),candidates.end(),[](get_friends::row const& item)
-																			{return item.is_visited == false; });
+																			{return item.visit_status == row::not_visited; });
 
 		ask_next_node(next_candidate);
-		//candidates.erase(candidates.begin());
 	}
-
-
-
 }
 
 get_friends::get_friends(
@@ -204,7 +203,8 @@ bool get_friends::invoke(observer_ptr o)
 
 	auto current_row = std::find_if(candidates.begin(), candidates.end(), [&o](row const& item)
 																			{return o->id() == item.id;});
-
+	TORRENT_ASSERT(current_row != candidates.end());
+	//current_row.visit_status = get_friends::row::not_visited;
 	if (current_row->transaction_id == "")
 		// temp solution. bad practice
 		const_cast<std::string&>(current_row->transaction_id) = transaction;
@@ -226,7 +226,7 @@ bool get_friends::appropriate_candidate_exists()
 
 		auto exists = std::find_if(candidates.begin(),candidates.end(),[&it](row const& item)
 																{
-																	return item.is_visited == false &&
+																	return item.visit_status == get_friends::row::not_visited &&
 																		it->simil < item.simil;
 																});
 		// stop condition. needed to be updated
@@ -237,7 +237,7 @@ bool get_friends::appropriate_candidate_exists()
 	{
 		// friend list very small. Any not visited nodes are good
 		auto exists = std::find_if(candidates.begin(),candidates.end(),[](row const& item)
-																{return item.is_visited == false;});
+																{return item.visit_status == get_friends::row::not_visited;});
 
 		if (exists == candidates.end())
 			return false;
@@ -252,7 +252,7 @@ void get_friends::ask_next_node(friends_results_table::iterator const& it)
 	auto next_candidate_observer = get_friends::new_observer(it->addr,it->id,target());
 
 	m_results.push_back(next_candidate_observer);
-	dynamic_cast<get_friends*>(this)->add_requests();
+	add_requests();
 }
 
 observer_ptr get_friends::new_observer(udp::endpoint const& ep
@@ -267,17 +267,15 @@ observer_ptr get_friends::new_observer(udp::endpoint const& ep
 get_friends::node_item get_friends::read_node_item(char const* str_in)
 {
 	get_friends::node_item n;
-	std::string similsrity_str = "0.";
-	int similarity_offset = 7;
+	double term_value = 0.0;
+
 	std::copy(str_in, str_in + sizeof(node_id), n.id.begin());
 	str_in += sizeof(node_id);
 
-	std::copy(str_in, str_in + similarity_offset, similsrity_str.begin()+2);
+	std::copy(str_in, str_in + sizeof(double), (char*)&term_value);
 
-	unsigned int received_num = std::stoi(similsrity_str);
-	n.similarity = std::stod(similsrity_str);
-
-	str_in += similarity_offset;
+	n.similarity = term_value;
+	str_in += sizeof(double);
 	n.ep = detail::read_v4_endpoint<udp::endpoint>(str_in);
 	return n;
 }

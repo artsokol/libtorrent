@@ -668,6 +668,23 @@ namespace libtorrent
 #endif
 	}
 
+	void session_handle::add_nsw_query(std::string const&  query)
+	{
+#ifndef TORRENT_DISABLE_NSW
+		async_call(&session_impl::add_nsw_query, query);
+#else
+		TORRENT_UNUSED(node);
+#endif
+	}
+
+	void session_handle::get_nsw_query_results(std::shared_ptr<std::vector<std::string> > out, unsigned int count)
+	{
+	#ifndef TORRENT_DISABLE_NSW
+			return sync_call(&session_impl::get_nsw_query_results, out, count);
+	#else
+			TORRENT_UNUSED(node);
+	#endif
+	}
 
 	void session_handle::add_extension(std::function<std::shared_ptr<torrent_plugin>(torrent_handle const&, void*)> ext)
 	{

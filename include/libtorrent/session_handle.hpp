@@ -461,6 +461,8 @@ namespace libtorrent
 		bool is_nsw_running() const;
 		nsw_settings get_nsw_settings() const;
 		void add_nsw_node(sha1_hash const& info_hash, std::string const&  descr);
+		void add_nsw_query(std::string const&  query);
+		void get_nsw_query_results(std::shared_ptr<std::vector<std::string> > out, unsigned int count);
 		void nsw_get_peers(sha1_hash const& info_hash);
 		// This function adds an extension to this session. The argument is a
 		// function object that is called with a ``torrent_handle`` and which should

@@ -33,6 +33,7 @@ private:
 	std::int16_t m_max_threads = 2;
 	std::int16_t m_responses = 0;
 	std::int16_t m_timeouts = 0;
+	std::int16_t m_retrieved_nodes = 0;
 #ifndef TORRENT_DISABLE_LOGGING
 
 	std::uint32_t m_id;
@@ -50,6 +51,7 @@ protected:
 	node& m_node;
 	std::vector<observer_ptr> m_results;
 public:
+	typedef std::vector<std::tuple<node_id, udp::endpoint, std::string, double, uint16_t>> callback_data_t;
 	//void traverse(node_id const& id, udp::endpoint const& addr);
 	void finished(observer_ptr o);
 
@@ -73,7 +75,7 @@ public:
 	traversal_algorithm(node& nsw_node, node_id const& id, vector_t const& target_string);
 	int invoke_count() const { TORRENT_ASSERT(m_invoke_count >= 0); return m_invoke_count; }
 	int branch_factor() const { TORRENT_ASSERT(m_max_threads >= 0); return m_max_threads; }
-
+	void increase_visited() {++m_retrieved_nodes;};
 	node& get_node() const { return m_node; }
 
 #ifndef TORRENT_DISABLE_LOGGING

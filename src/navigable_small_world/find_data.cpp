@@ -161,7 +161,7 @@ void find_data::done()
 
 	if (m_nodes_callback) m_nodes_callback(results);
 
-	//traversal_algorithm::done();
+	traversal_algorithm::done();
 }
 
 } } // namespace libtorrent::nsw

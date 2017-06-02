@@ -13,10 +13,10 @@ namespace libtorrent { namespace nsw
 observer_ptr bootstrap::new_observer(udp::endpoint const& ep
 	, node_id const& id, vector_t const& text)
 {
-	auto o = m_node.m_rpc.allocate_observer<get_friends_observer>(self(), ep, id, text);
+	auto o = m_node.m_rpc.allocate_observer<get_friends_observer>(self(), ep, id, text, m_exact_search);
 
 	double similarity = term_vector::getVecSimilarity(o->descr(),target());
-	auto inserted_item = candidates.emplace(o->id(),o->target_ep(),"","",similarity,false);
+	auto inserted_item = candidates.emplace(o->id(),o->target_ep(),"","",similarity,get_friends::row::visiting,0);
 // #if TORRENT_USE_ASSERTS
 // 	if (o) o->m_in_constructor = false;
 // #endif
@@ -25,26 +25,18 @@ observer_ptr bootstrap::new_observer(udp::endpoint const& ep
 
 bool bootstrap::invoke(observer_ptr o)
 {
-
-	// std::for_each(m_results.begin(),m_results.end(),[this](observer_ptr const& item)
-	// 													{
-	// 														 item.descr()
-
-	// 													});
-	// double similarity = term_vector::getVecSimilarity(o->descr(),target());
-
-	// std::find_if(candidates.begin(),candidates.end(),[&o](get_friends::node_item const& item)
-	// 													{return o->term_vector::getVecSimilarity(o->descr(),target())});
-
-	return get_friends::invoke(/*e, o->target_ep(), */o);
+	return get_friends::invoke(o);
 }
 
 bootstrap::bootstrap(
 	node& nsw_node
 	, node_id const& nid
 	, vector_t const& target_text
-	, done_callback const& callback)
-	: get_friends(nsw_node, target_text, std::bind(&add_friend_engine, _1, std::ref(nsw_node))/*get_friends::data_callbackf()*/, callback)
+	, done_callback const& callback
+	, data_callback const& result_callback
+	, bool exact)
+	: get_friends(nsw_node, target_text, result_callback, callback)
+	, m_exact_search(exact)
 {
 }
 

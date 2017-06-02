@@ -3,28 +3,33 @@
 
 #include "libtorrent/navigable_small_world/find_data.hpp"
 #include <cstdio>
+#include <mutex>          // std::mutex
 namespace libtorrent { namespace nsw
 {
 
 class get_friends : public find_data
 {
 public:
-	typedef std::function<void(std::vector<std::tuple<node_id, udp::endpoint, std::string>> const&)> data_callback;
+    typedef std::vector<std::tuple<node_id, udp::endpoint, std::string, double, uint16_t>> callback_data_t;
+	typedef std::function<void(callback_data_t const&, nsw_lookup const& common_statistic)> data_callback;
 
     struct row
     {
+        typedef enum {not_visited = 0, visiting, visited} visiting_status_t;
         node_id id;
         udp::endpoint addr;
         std::string token;
         std::string transaction_id;
         double simil;
-        bool is_visited;
+        visiting_status_t visit_status;
+        uint16_t generation;
         row():id(0)
         	,addr()
         	,token("")
         	,transaction_id("")
         	,simil(0.0)
-        	,is_visited(false)
+        	,visit_status(not_visited)
+            ,generation(0)
         {}
 
         row(node_id const& a_id
@@ -32,12 +37,14 @@ public:
         				,std::string const& a_token
         				,std::string const& a_trans_id
         				,double& a_simil
-        				,bool a_visited):id(a_id)
+        				,visiting_status_t a_visited
+                        ,uint16_t a_generation=0):id(a_id)
         								,addr(a_addr)
 							        	,token(a_token)
 							        	,transaction_id(a_trans_id)
 							        	,simil(a_simil)
-							        	,is_visited(a_visited)
+							        	,visit_status(a_visited)
+                                        ,generation(a_generation)
         {}
 
         bool operator==(row const& r)
@@ -68,6 +75,7 @@ public:
     friends_results_table candidates;
 protected:
 	data_callback m_data_callback;
+    std::mutex m_mutex;
 
 public:
 	void got_friends(/*std::multimap<double, tcp::endpoint> const& friends*/);
@@ -97,10 +105,13 @@ struct get_friends_observer : find_data_observer
 		std::shared_ptr<traversal_algorithm> const& algorithm
 		, udp::endpoint const& ep
 		, node_id const& id
-		, vector_t const& text)
+		, vector_t const& text
+        , bool exact = false)
 		: find_data_observer(algorithm, ep, id, text)
+        , exact_search(exact)
 	{}
 
+    bool exact_search;
 	virtual void reply(msg const&);
 
 #ifndef TORRENT_DISABLE_LOGGING
