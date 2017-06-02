@@ -398,9 +398,9 @@ std::wstring term_vector::vectorToString(const wvector_t& termVector)
     for_each(termVector.begin(),termVector.end(),[&out](const std::pair<std::wstring, double>& map_item)
                                                         {
                                                             std::wstringstream ss;
-                                                            ss << std::fixed << std::setprecision(7) << map_item.second;
+                                                            ss << std::fixed << std::setprecision(15) << map_item.second;
                                                             std::wstring mantissa_str = ss.str();
-                                                            out += map_item.first + L":" + mantissa_str.substr(2,7); + L",";
+                                                            out += map_item.first + L":" + mantissa_str.substr(2,15); + L",";
                                                         });
     out.pop_back();
     return out;
@@ -412,10 +412,10 @@ std::string term_vector::vectorToString(const vector_t& termVector)
     for_each(termVector.begin(),termVector.end(),[&out](const std::pair<std::string, double>& map_item)
                                                         {
                                                             std::stringstream ss;
-                                                            ss << std::fixed << std::setprecision(7) << map_item.second;
+                                                            ss << std::fixed << std::setprecision(15) << map_item.second;
                                                             std::string mantissa_str = ss.str();
 
-                                                            out += map_item.first + ":" + mantissa_str.substr(2,7) + ",";
+                                                            out += map_item.first + ":" + mantissa_str.substr(2,15) + ",";
                                                         });
     out.pop_back();
     return out;
@@ -425,11 +425,9 @@ entry& term_vector::vectorToEntry(const vector_t& termVector, entry& a)
 {
   for_each(termVector.begin(),termVector.end(),[&a](const std::pair<std::string, double>& map_item)
                                                         {
-                                                            std::stringstream ss;
-                                                            ss << std::fixed << std::setprecision(7) << map_item.second;
-                                                            std::string mantissa_str = ss.str();
-
-                                                            a[map_item.first] = mantissa_str.substr(2,7);
+                                                            char buf[sizeof(double)+1] = {0};
+                                                            std::memcpy(buf, &map_item.second, sizeof(double));
+                                                            a[map_item.first] = buf;
                                                         });
   return a;
 }
@@ -444,13 +442,9 @@ vector_t& term_vector::bencodeToVector(bdecode_node const& encode_vec, vector_t&
 
         std::pair<string_view, bdecode_node> elem = encode_vec.dict_at(i);
 
-        std::string received_num_str = "0." + std::string(elem.second.string_value());
-
-        //int digits = msg::count_digits(received_num);
-        //double value = (digits != 0)?
-        //                    received_num/std::pow(10, digits):
-        //                    0.0;
-        out[elem.first.to_string()] = std::stod(received_num_str);
+        double term_value = 0.0;
+        std::memcpy(&term_value, std::string(elem.second.string_value()).c_str(), sizeof(double));
+        out[elem.first.to_string()] = term_value;
     }
 
     return out;
