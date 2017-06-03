@@ -1220,7 +1220,8 @@ int main(int argc, char* argv[])
 #ifndef TORRENT_DISABLE_NSW
 			"\n NSW SETTINGS\n"
 			"  -g                    enable gateway mode.\n"
-			"  -p <port>             bind to specified port.\n"
+			"  -i interface:<port>   bind to specified interface and port.\n"
+			"                        Interface name or ip can be specified. \n"
 #endif
 			"\n DISK OPTIONS\n"
 			"  -a <mode>             sets the allocation mode. [sparse|allocate]\n"
@@ -1381,10 +1382,12 @@ int main(int argc, char* argv[])
 					settings.set_bool(settings_pack::enable_gateway_mode,true);
 					break;
 				}
-			case 'p':
+			case 'i':
 				{
-					std::string interface("127.0.0.1:");
-					interface += arg;
+					std::string interface(arg);//("0.0.0.0:");
+					//if()
+					//	interface += 7000;
+					//interface += arg;
 					std::string current_eth = settings.get_str(settings_pack::listen_interfaces);
 					current_eth = current_eth + "," + interface;
 					settings.set_str(settings_pack::listen_interfaces,interface.c_str());

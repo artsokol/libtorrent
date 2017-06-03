@@ -39,6 +39,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <array>
 
+#define NSW_GATE_IP "127.0.0.1"
+
 namespace {
 
 	template <class T>
@@ -117,7 +119,7 @@ namespace libtorrent
 		SET(i2p_hostname, "", &session_impl::update_i2p_bridge),
 		SET(peer_fingerprint, "-LT1200-", &session_impl::update_peer_fingerprint),
 		SET(dht_bootstrap_nodes, "dht.libtorrent.org:25401", &session_impl::update_dht_bootstrap_nodes),
-		SET(nsw_bootstrap_nodes, "127.0.0.1:26401-'one two three'", &session_impl::update_nsw_bootstrap_nodes)
+		SET(nsw_bootstrap_nodes, NSW_GATE_IP":26401-'one two three'", &session_impl::update_nsw_bootstrap_nodes)
 	}};
 
 	std::array<bool_setting_entry_t, settings_pack::num_bool_settings> bool_settings =
