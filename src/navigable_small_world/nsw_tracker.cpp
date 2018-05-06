@@ -123,20 +123,15 @@ namespace libtorrent { namespace nsw {
 						_item.second.get()->refresh_timer.cancel(ec);});
 	}
 
-	void nsw_tracker::nsw_status(nsw_nodes_content_table_t& cf_tables
-		 	// , nsw_nodes_content_table_t& ff_tables
-		 	)
+	void nsw_tracker::nsw_status(nsw_nodes_content_table_t& cf_tables)
 	{
-		std::for_each(m_nodes.begin(),m_nodes.end(),[&cf_tables/*, &ff_tables*/]
+		std::for_each(m_nodes.begin(),m_nodes.end(),[&cf_tables]
 										(node_collection_t::value_type& table_item)
 										{
 											routing_table_t cf_table;
-											// routing_table_t ff_table;
-											table_item.second.get()->status(cf_table/*,ff_table*/);
+											table_item.second.get()->status(cf_table);
 											cf_tables.emplace(table_item.second.get()->nid()
 														, std::make_pair(table_item.second.get()->descr(),cf_table));
-											// ff_tables.emplace(table_item.second.get()->nid()
-											// 			, std::make_pair(table_item.second.get()->descr(),ff_table));
 										});;
 	}
 

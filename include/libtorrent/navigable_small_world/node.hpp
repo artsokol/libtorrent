@@ -196,9 +196,7 @@ public:
 		m_running_requests.erase(a);
 	}
 
-	void status(std::vector<node_entry>& cf_table
-		 	// , std::vector<node_entry>& ff_table
-		 	);
+	void status(std::vector<node_entry>& cf_table);
 
 	nsw_lookup const& get_stat(){return m_last_query_stat;};
 	std::tuple<int, int, int> get_stats_counters() const;
