@@ -4595,14 +4595,14 @@ namespace aux {
 	{
 		//std::vector<dht_lookup> requests;
 		nsw_nodes_content_table_t cf_tables;
-		nsw_nodes_content_table_t ff_tables;
+		// nsw_nodes_content_table_t ff_tables;
 
 #ifndef TORRENT_DISABLE_NSW
 		if (m_nsw)
-			m_nsw->nsw_status(cf_tables, ff_tables);
+			m_nsw->nsw_status(cf_tables/*, ff_tables*/);
 #endif
 
-		m_alerts.emplace_alert<nsw_stats_alert>(std::move(cf_tables), std::move(ff_tables));
+		m_alerts.emplace_alert<nsw_stats_alert>(std::move(cf_tables)/*, std::move(ff_tables)*/);
 	}
 
 	std::vector<torrent_handle> session_impl::get_torrents() const

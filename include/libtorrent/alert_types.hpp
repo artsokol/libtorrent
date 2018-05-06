@@ -2668,7 +2668,6 @@ namespace libtorrent
 		// internal
 		nsw_stats_alert(aux::stack_allocator& alloc
 			, nsw_nodes_content_table_t cf_tables //closest friends
-			, nsw_nodes_content_table_t ff_tables //far friends
 			);
 
 		TORRENT_DEFINE_ALERT(nsw_stats_alert, 97)
@@ -2682,7 +2681,6 @@ namespace libtorrent
 		// contains information about every bucket in the DHT routing
 		// table.
 		nsw_nodes_content_table_t const cf_routing_tables;
-		nsw_nodes_content_table_t const ff_routing_tables;
 	};
 
 	struct TORRENT_EXPORT nsw_lookup

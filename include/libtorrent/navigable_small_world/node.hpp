@@ -152,7 +152,7 @@ public:
 	std::uint32_t search_id() { return m_search_id++; }
 #endif
 
-	std::tuple<int, int, int> size() const { return m_table.size(); }
+	std::tuple<int, /*int,*/ int> size() const { return m_table.size(); }
 
 	// std::int64_t num_global_nodes() const
 	// { return m_table.num_global_nodes(); }
@@ -197,7 +197,8 @@ public:
 	}
 
 	void status(std::vector<node_entry>& cf_table
-		 	, std::vector<node_entry>& ff_table);
+		 	// , std::vector<node_entry>& ff_table
+		 	);
 
 	nsw_lookup const& get_stat(){return m_last_query_stat;};
 	std::tuple<int, int, int> get_stats_counters() const;

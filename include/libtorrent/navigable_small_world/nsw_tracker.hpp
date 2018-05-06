@@ -105,8 +105,7 @@ public:
 //		void direct_request(udp::endpoint const& ep, entry& e
 //			, std::function<void(msg const&)> f);
 
-		void nsw_status(nsw_nodes_content_table_t& cf_table
-		 	, nsw_nodes_content_table_t& ff_table);
+		void nsw_status(nsw_nodes_content_table_t& cf_table);
 //		void update_stats_counters(counters& c) const;
 
 		void incoming_error(error_code const& ec

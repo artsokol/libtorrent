@@ -191,7 +191,7 @@ std::vector<libtorrent::dht_routing_bucket> dht_routing_table;
 
 #ifndef TORRENT_DISABLE_NSW
 std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<libtorrent::nsw::node_entry> > > cf_routing_tables;
-std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<libtorrent::nsw::node_entry> > > ff_routing_tables;
+// std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<libtorrent::nsw::node_entry> > > ff_routing_tables;
 std::shared_ptr<std::vector<std::string> > query_result(new std::vector<std::string>);
 #endif
 
@@ -890,7 +890,7 @@ bool handle_alert(libtorrent::session& ses, libtorrent::alert* a
 	if (nsw_stats_alert* p = alert_cast<nsw_stats_alert>(a))
 	{
 		cf_routing_tables = p->cf_routing_tables;
-		ff_routing_tables = p->ff_routing_tables;
+		// ff_routing_tables = p->ff_routing_tables;
 		return true;
 	}
 #endif
@@ -1957,17 +1957,17 @@ int main(int argc, char* argv[])
 #include "libtorrent/navigable_small_world/term_vector.hpp"
 		if (show_nsw_status)
 		{
-			TORRENT_ASSERT(cf_routing_tables.size() == ff_routing_tables.size());
+			// TORRENT_ASSERT(cf_routing_tables.size() == ff_routing_tables.size());
 
 			std::string buf = "NSW stats:\n";
 			pos += 1;
 			auto cf_it = cf_routing_tables.begin();
-			auto ff_it = ff_routing_tables.begin();
+			// auto ff_it = ff_routing_tables.begin();
 
-			for(;cf_it != cf_routing_tables.end();++cf_it,++ff_it)
+			for(;cf_it != cf_routing_tables.end();++cf_it/*,++ff_it*/)
 			{
 				std::vector<libtorrent::nsw::node_entry>& closest_friends = cf_it->second.second;
-				std::vector<libtorrent::nsw::node_entry>& far_friends = ff_it->second.second;
+				// std::vector<libtorrent::nsw::node_entry>& far_friends = ff_it->second.second;
 				std::unordered_map<std::string, double> descr_term_vector;
 				nsw::term_vector::makeTermVector(cf_it->second.first,descr_term_vector);
 				buf += "----------------------------------------------------------------------------------------------\n";
@@ -1987,19 +1987,19 @@ int main(int argc, char* argv[])
 					pos += 1;
 				}
 				buf += "----------------------------------------------------------------------------------------------\n";
-				buf += "| far friends (" + std::to_string(far_friends.size()) + "): |\n";;
-				pos += 2;
+				// buf += "| far friends (" + std::to_string(far_friends.size()) + "): |\n";;
+				// pos += 2;
 
-				for(auto n:far_friends)
-				{
-					std::stringstream ss;
-                	ss << std::fixed << std::setprecision(15) << nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector);
+				// for(auto n:far_friends)
+				// {
+				// 	std::stringstream ss;
+    //             	ss << std::fixed << std::setprecision(15) << nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector);
 
-					buf += "|" +  ss.str() + " | " +  std::string(to_hex(n.id).c_str()) +
-								" | term vector " + vectorToString(n.term_vector).substr(0,35) + "... |\n";
-					pos += 1;
-				}
-				buf += "----------------------------------------------------------------------------------------------\n";
+				// 	buf += "|" +  ss.str() + " | " +  std::string(to_hex(n.id).c_str()) +
+				// 				" | term vector " + vectorToString(n.term_vector).substr(0,35) + "... |\n";
+				// 	pos += 1;
+				// }
+				// buf += "----------------------------------------------------------------------------------------------\n";
 				buf += "\n";
 				pos += 2;
 			}

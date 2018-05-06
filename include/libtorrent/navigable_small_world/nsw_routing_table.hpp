@@ -89,16 +89,6 @@ private:
 	using replacement_table_t = std::multiset<node_entry
 											, textComp>;
 
-
-	// class gateComp {
-	// public:
-	//     bool operator()(vector_t const& a,
-	// 				vector_t const& b) {
-
-	//         return term_vector::getVecSimilarity(a,b) >
-	// 				term_vector::getVecSimilarity(b.term_vector,m_text_vec);
-	//     }
-	// };
 ////////////////////////////////////////////////////////
 
 	uint32_t const m_neighbourhood_size = 6;
@@ -123,10 +113,6 @@ private:
 
 	// stores short links
 	routing_table_t m_close_nodes_rt;
-	// and long links - friends who was closest some
-	// time ago but now are not. We should keep links
-	// to provide log() search complexity.
-	routing_table_t m_far_nodes_rt;
 
 	// nodes with term_vectors exact the same as in other
 	// tables. Need for quick replacements.
@@ -144,8 +130,7 @@ public:
 	};
 	enum table_type_t {
 		none = -1,
-		closest_nodes = 0,
-		far_nodes
+		closest_nodes = 0
 	};
 
 	routing_table(node_id const& id, udp proto
@@ -159,8 +144,7 @@ public:
 
 	void status(nsw_routing_info& s) const;
 
-	void status(routing_table_t& cf_table
-		 	, routing_table_t& ff_table) const;
+	void status(routing_table_t& cf_table) const;
 
 	void node_failed(node_id const& nid, udp::endpoint const& ep);
 
@@ -202,9 +186,9 @@ public:
 	}
 
 	void for_each_node(void (*)(void*, node_entry const&)
-		, void (*)(void*, node_entry const&), void* userdata) const;
+		, void* userdata) const;
 
-	std::tuple<size_t, size_t, size_t> size() const;
+	std::tuple<size_t,/* size_t, */size_t> size() const;
 
 	bool is_full() const;
 
@@ -226,8 +210,6 @@ public:
 	routing_table_t const& neighbourhood() const
 	{ return m_close_nodes_rt; }
 
-	routing_table_t const& old_relations() const
-	{ return m_far_nodes_rt; }
 	int neighbourhood_size() const { return m_neighbourhood_size; }
 
 	// fills the vector with the k nodes from our storage that

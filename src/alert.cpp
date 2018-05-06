@@ -1803,27 +1803,23 @@ namespace libtorrent {
 
 
 	nsw_stats_alert::nsw_stats_alert(aux::stack_allocator&
-		, nsw_nodes_content_table_t cf_tables
-		, nsw_nodes_content_table_t ff_tables)
+		, nsw_nodes_content_table_t cf_tables)
 		: alert()
 		, cf_routing_tables(std::move(cf_tables))
-		, ff_routing_tables(std::move(ff_tables))
 	{}
 
 	std::string nsw_stats_alert::message() const
 	{
-		TORRENT_ASSERT(cf_routing_tables.size() == ff_routing_tables.size());
+		// TORRENT_ASSERT(cf_routing_tables.size() == ff_routing_tables.size());
 
 		std::string buf = "NSW stats:\n";
 		auto cf_it = cf_routing_tables.begin();
-		auto ff_it = ff_routing_tables.begin();
-		for(;cf_it != cf_routing_tables.end();++cf_it,++ff_it)
+		// auto ff_it = ff_routing_tables.begin();
+		for(;cf_it != cf_routing_tables.end();++cf_it/*,++ff_it*/)
 		{
 			buf += "NSW node: id " + std::string(aux::to_hex(cf_it->first).c_str()) + " | descr " + cf_it->second.first + "\n";
 
 			buf += "close friends (" + std::to_string(cf_it->second.second.size()) + "):\n";
-
-			buf += "far friends (" + std::to_string(ff_it->second.second.size()) + "):\n";;
 
 			buf += "\n\n";
 		}

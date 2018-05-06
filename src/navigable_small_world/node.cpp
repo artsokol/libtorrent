@@ -169,13 +169,12 @@ std::string node::generate_token(udp::endpoint const& addr, sha1_hash const& inf
 }
 
 
-void node::status(std::vector<node_entry>& cf_table
-		 	, std::vector<node_entry>& ff_table)
+void node::status(std::vector<node_entry>& cf_table)
 {
 
 	std::lock_guard<std::mutex> l(m_mutex);
 
-	m_table.status(cf_table,ff_table);
+	m_table.status(cf_table);
 }
 
 void node::bootstrap(/*std::vector<udp::endpoint> const& nodes,*/
@@ -201,15 +200,15 @@ void node::bootstrap(/*std::vector<udp::endpoint> const& nodes,*/
 								#endif
 											r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial);
 									});
-	//add old friends
-	for_each(m_table.old_relations().begin(),m_table.old_relations().end(),[this, &r, &count]
-										(const node_entry& n)
-									{
-								#ifndef TORRENT_DISABLE_LOGGING
-											++count;
-								#endif
-											r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial);
-									});
+	// //add old friends
+	// for_each(m_table.old_relations().begin(),m_table.old_relations().end(),[this, &r, &count]
+	// 									(const node_entry& n)
+	// 								{
+	// 							#ifndef TORRENT_DISABLE_LOGGING
+	// 										++count;
+	// 							#endif
+	// 										r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial);
+	// 								});
 
 	// make us start as far away from our node ID as possible
 	r->trim_seed_nodes();
@@ -266,15 +265,6 @@ void node::nsw_query(vector_t& query_vec)
 #endif
 	//add closest friends
 	for_each(m_table.neighbourhood().begin(),m_table.neighbourhood().end(),[this, &r, &count]
-										(const node_entry& n)
-									{
-								#ifndef TORRENT_DISABLE_LOGGING
-											++count;
-								#endif
-											r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial);
-									});
-	//add old friends
-	for_each(m_table.old_relations().begin(),m_table.old_relations().end(),[this, &r, &count]
 										(const node_entry& n)
 									{
 								#ifndef TORRENT_DISABLE_LOGGING

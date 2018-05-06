@@ -45,7 +45,6 @@ routing_table::routing_table(node_id const& id, udp proto, int neighbourhood_siz
 	, m_last_self_refresh(min_time())
 //	, m_ips(0)
 	, m_close_nodes_rt()
-	, m_far_nodes_rt()
 	, m_replacement_nodes(m_description_vec)
 #ifndef TORRENT_DISABLE_LOGGING
 	, m_log(log)
@@ -58,23 +57,18 @@ routing_table::routing_table(node_id const& id, udp proto, int neighbourhood_siz
 void routing_table::status(nsw_routing_info& s) const
 {
 	s.num_nodes = m_close_nodes_rt.size();
-	s.num_long_links = m_far_nodes_rt.size();
 }
 
-void routing_table::status(routing_table_t& cf_table
-		 	, routing_table_t& ff_table) const
+void routing_table::status(routing_table_t& cf_table) const
 {
 	std::for_each(m_close_nodes_rt.begin(),m_close_nodes_rt.end(),[&cf_table](node_entry const& n)
 																	{cf_table.push_back(n);});
 
-	std::for_each(m_far_nodes_rt.begin(),m_far_nodes_rt.end(),[&ff_table](node_entry const& n)
-																	{ff_table.push_back(n);});
 }
 
-std::tuple<size_t, size_t, size_t> routing_table::size() const
+std::tuple<size_t, size_t> routing_table::size() const
 {
 	size_t friend_nodes = m_close_nodes_rt.size();
-	size_t old_friend_nodes = m_far_nodes_rt.size();
 	size_t confirmed = 0;
 
 	for (auto const& k : m_close_nodes_rt)
@@ -82,37 +76,13 @@ std::tuple<size_t, size_t, size_t> routing_table::size() const
 		if (k.confirmed()) ++confirmed;
 	}
 
-	for (auto const& k : m_far_nodes_rt)
-	{
-		if (k.confirmed()) ++confirmed;
-	}
-
-	return std::make_tuple(friend_nodes, old_friend_nodes, confirmed);
+	return std::make_tuple(friend_nodes, confirmed);
 }
 
 // concerns about goals !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 node_entry const* routing_table::next_for_refresh()
 {
 	node_entry* candidate = nullptr;
-
-	//for (auto const &i : m_close_nodes_rt)
-
-	for (routing_table_t::iterator i = m_far_nodes_rt.begin();
-		i != m_far_nodes_rt.end(); ++i)
-	{
-		if (i->id == m_id) continue;
-
-		if (i->last_queried == min_time())
-		{
-			candidate = &*i;
-			break;
-		}
-
-		if (candidate == nullptr || i->last_queried < candidate->last_queried)
-		{
-			candidate = &*i;
-		}
-	}
 
 	for (routing_table_t::iterator i = m_close_nodes_rt.begin();
 		i != m_close_nodes_rt.end(); ++i)
@@ -155,18 +125,6 @@ node_entry* routing_table::find_node(udp::endpoint const& ep
 		return &*j;
 	}
 
-	for (routing_table_t::iterator j = m_far_nodes_rt.begin();
-		j != m_far_nodes_rt.end(); ++j)
-	{
-		if (j->addr() != ep.address() ||
-			j->port() != ep.port())
-		{
-			continue;
-		}
-		index = j - m_far_nodes_rt.begin();
-		type = routing_table::far_nodes;
-		return &*j;
-	}
 	type = routing_table::none;
 	index = -1;
 	return nullptr;
@@ -183,14 +141,6 @@ node_entry* routing_table::find_node(node_id const& id)
 		}
 	}
 
-	for (routing_table_t::iterator j = m_far_nodes_rt.begin();
-		j != m_far_nodes_rt.end(); ++j)
-	{
-		if (j->id == id)
-		{
-			return &*j;
-		}
-	}
 	return nullptr;
 }
 
@@ -205,8 +155,6 @@ void routing_table::find_node(vector_t const& target_string
 
 	if(!m_close_nodes_rt.empty())
 		l.insert(l.end(),m_close_nodes_rt.begin(),m_close_nodes_rt.end());
-	if(!m_far_nodes_rt.empty())
-		l.insert(l.end(),m_far_nodes_rt.begin(),m_far_nodes_rt.end());
 
 	if(l.empty())
 		return;
@@ -300,39 +248,6 @@ routing_table::add_node_status_t routing_table::add_friend_impl(node_entry e)
 		// as the last replacement strategy, if the node we found matching our
 		// bit prefix has higher RTT than the new node, replace it.
 
-		// std::find_if(m_replacement_nodes.begin(),m_replacement_nodes.end(),
-		// 												[](node_entry const& e)
-		// 													{ return ne.pinged() == false;)
-
-// 		if (e.pinged() && e.fail_count() == 0
-// 			&& m_replacement_nodes.find(e) == m_replacement_nodes.end())
-// 		{
-// 			// if the node we're trying to insert is considered pinged,
-// 			// we may replace other nodes that aren't pinged
-// 			routing_table_t::reverse_iterator k = std::find_if(m_close_nodes_rt.rbegin(),
-// 															m_close_nodes_rt.rend(),
-// 															[](node_entry const& ne)
-// 															{ return ne.pinged() == false; });
-
-// 			if (k != m_close_nodes_rt.rend() && !k->pinged())
-// 			{
-// 				// j points to a node that has not been pinged.
-// 				// Replace it with this new one
-// 				*k = e;
-// 				sort(m_close_nodes_rt.begin(), m_close_nodes_rt.end(),
-// 					[&e](node_entry const& a,node_entry const& b) -> bool
-// 					{
-// 						return term_vector::getVecSimilarity(a.term_vector,e.term_vector) >
-// 									term_vector::getVecSimilarity(b.term_vector,e.term_vector);
-// 					});
-
-// #ifndef TORRENT_DISABLE_LOGGING
-// 				log_node_added(*k);
-// #endif
-// 				return node_added;
-// 			}
-
-// 		}
 		return failed_to_add;
 	} // getSimilarity
 
@@ -344,20 +259,6 @@ routing_table::add_node_status_t routing_table::add_friend_impl(node_entry e)
 
 	if (j == m_close_nodes_rt.end())
 	{
-		// check if it exist in vector of far nodes
-		j = std::find_if(m_far_nodes_rt.begin()
-						, m_far_nodes_rt.end()
-						, [&e](node_entry const& ne)
-						{ return ne.term_vector == e.term_vector; });
-
-		if (j != m_far_nodes_rt.end())
-		{
-			j->timeout_count = 0;
-			j->update_rtt(e.rtt);
-			remove_node(&*j,m_far_nodes_rt);
-			return insert_node(*j);
-		}
-
 		return insert_node(e);
 	}
 	else
@@ -393,16 +294,8 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 #endif
 		return node_added;
 	}
-	else if (table_type == routing_table::far_nodes)
-	{
-		// node from far list has chenged it's description
-		remove_node(existing,m_far_nodes_rt);
-	}
-
-	//node_entry& last_in_closest = m_close_nodes_rt.back();
 	if (m_close_nodes_rt.size() == m_neighbourhood_size)
 	{
-		m_far_nodes_rt.push_back(m_close_nodes_rt.back());
 		m_close_nodes_rt.pop_back();
 	}
 	m_close_nodes_rt.push_back(e);
@@ -414,16 +307,6 @@ routing_table::add_node_status_t routing_table::insert_node(const node_entry& e)
 					return term_vector::getVecSimilarity(a.term_vector,m_description_vec) >
 										term_vector::getVecSimilarity(b.term_vector,m_description_vec);
 				});
-
-	if (m_far_nodes_rt.size() > 1)
-	{
-		sort(m_far_nodes_rt.begin(), m_far_nodes_rt.end(),
-					[this](node_entry const& a,node_entry const& b) -> bool
-					{
-						return term_vector::getVecSimilarity(a.term_vector,m_description_vec) >
-											term_vector::getVecSimilarity(b.term_vector,m_description_vec);
-					});
-	}
 
 #ifndef TORRENT_DISABLE_LOGGING
 	log_node_added(e);
@@ -444,36 +327,23 @@ void routing_table::update_description()
 {
 	// pull all nodes out of the routing table, effectively emptying it
 	routing_table_t old_close_nodes;
-	routing_table_t old_far_nodes;
 
 	old_close_nodes.swap(m_close_nodes_rt);
-	old_far_nodes.swap(m_far_nodes_rt);
 
 	// then add them all back. First add the main nodes, then the replacement
 	// nodes
 	for (auto const& n : old_close_nodes)
 		add_friend(n);
-
-	// now add back the replacement nodes
-	for (auto const& n : old_far_nodes)
-		add_friend(n);
 }
 
 void routing_table::for_each_node(
 	void (*func_for_close_nodes)(void*, node_entry const&)
-	, void (*func_for_far_nodes)(void*, node_entry const&)
 	, void* userdata) const
 {
 	if (func_for_close_nodes)
 	{
 		for (auto const& j : m_close_nodes_rt)
 			func_for_close_nodes(userdata, j);
-	}
-
-	if (func_for_far_nodes)
-	{
-		for (auto const& j : m_far_nodes_rt)
-			func_for_far_nodes(userdata, j);
 	}
 }
 
@@ -529,29 +399,16 @@ void routing_table::node_failed(node_id const& nid, udp::endpoint const& ep)
 	if (j == m_close_nodes_rt.end())
 	{
 		const node_entry* found_node = nullptr;
-		replacement_table_t::iterator k;
+		auto k = std::find_if(m_replacement_nodes.begin()
+						, m_replacement_nodes.end()
+						, [&nid](const replacement_table_t::value_type& table_item)
+						{ return table_item.id == nid; });
 
-		j = std::find_if(m_far_nodes_rt.begin()
-						, m_far_nodes_rt.end()
-						, [&nid](node_entry const& ne)
-						{ return ne.id == nid; });
-
-		if (j == m_far_nodes_rt.end()
-			/*|| j->endpoint != ep*/)
-		{
-			// let's check replacemet list
-			k = std::find_if(m_replacement_nodes.begin()
-							, m_replacement_nodes.end()
-							, [&nid](const replacement_table_t::value_type& table_item)
-							{ return table_item.id == nid; });
-
-			if (k == m_replacement_nodes.end())
-				return;
-			else
-				found_node	= &*k;
-		}
+		if (k == m_replacement_nodes.end())
+			return;
 		else
-			found_node = &*j;
+			found_node	= &*k;
+
 
 		found_node->timed_out();
 
@@ -562,13 +419,7 @@ void routing_table::node_failed(node_id const& nid, udp::endpoint const& ep)
 		// has never responded at all, remove it
 		if (found_node->fail_count() >= m_settings.max_fail_count || !found_node->pinged())
 		{
-			//m_ips.erase(j->addr());
-			if (j != m_far_nodes_rt.end())
-				m_far_nodes_rt.erase(j);
-			else
-				m_replacement_nodes.erase(k);
-
-
+			m_replacement_nodes.erase(k);
 		}
 
 		return;
