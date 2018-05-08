@@ -25,7 +25,9 @@ bool is_sorted(It b, It e, Cmp cmp)
 
 observer_ptr traversal_algorithm::new_observer(udp::endpoint const& ep
 	, node_id const& id
-	, vector_t const& descr)
+	, vector_t const& descr
+	, int level
+	, int layer)
 {
 	auto o = m_node.m_rpc.allocate_observer<null_observer>(self(), ep, id, descr);
 	return o;
@@ -61,10 +63,12 @@ void traversal_algorithm::resort_results()
 void traversal_algorithm::add_entry(node_id const& id
 								, vector_t const& description
 								, udp::endpoint const& addr
-								, unsigned char const flags)
+								, unsigned char const flags
+								, int level
+								, int layer)
 {
 //	TORRENT_ASSERT(m_node.m_rpc.allocation_size() >= sizeof(find_data_observer));
-	auto o = new_observer(addr, id, description);
+	auto o = new_observer(addr, id, description, level, layer);
 	if (!o)
 	{
 #ifndef TORRENT_DISABLE_LOGGING
@@ -380,7 +384,7 @@ void traversal_algorithm::add_gate_entries()
 	}
 #endif
 	for (auto const& n : m_node.m_table)
-		add_entry(node_id(0), n.first, n.second, observer_interface::flag_initial);
+		add_entry(node_id(0), n.first, n.second, observer_interface::flag_initial, 0, 1);
 }
 
 void traversal_algorithm::init()

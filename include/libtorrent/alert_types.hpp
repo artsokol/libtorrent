@@ -2661,7 +2661,7 @@ namespace libtorrent
 	};
 
 	using nsw_nodes_content_table_t =
-			std::unordered_map<sha1_hash, std::pair<std::string, std::vector<nsw::node_entry> > >;
+			std::unordered_map<sha1_hash, std::pair<std::string, std::vector<std::pair<int, std::vector<nsw::node_entry>>> > >;
 	// contains current NSW state. Posted in response to session::post_dht_stats().
 	struct TORRENT_EXPORT nsw_stats_alert final : alert
 	{

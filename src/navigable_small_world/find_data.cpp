@@ -64,11 +64,11 @@ void find_data::start()
 	if (m_results.empty())
 	{
 		std::vector<node_entry> nodes;
-		m_node.m_table.find_node(target(), nodes, m_node.m_table.neighbourhood_size());
+		m_node.m_table.find_node(target(), nodes, m_node.m_table.neighbourhood_size(), 0);
 
 		for (auto const& n : nodes)
 		{
-			add_entry(n.id, n.term_vector, n.endpoint, observer_interface::flag_initial);
+			add_entry(n.id, n.term_vector, n.endpoint, observer_interface::flag_initial, 0, 1);
 		}
 	}
 
@@ -92,7 +92,9 @@ void find_data::got_write_token(node_id const& n, std::string write_token)
 
 observer_ptr find_data::new_observer(udp::endpoint const& ep
 	, node_id const& id
-	, vector_t const& descr)
+	, vector_t const& descr
+	, int lvl
+	, int lay)
 {
 	auto o = m_node.m_rpc.allocate_observer<find_data_observer>(self(), ep, id, descr);
 // #if TORRENT_USE_ASSERTS

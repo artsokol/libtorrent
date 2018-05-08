@@ -177,7 +177,7 @@ public:
 
 	void new_write_key();
 
-	void add_node(udp::endpoint const& node, node_id const& id);
+	// void add_node(udp::endpoint const& node, node_id const& id);
 	// to doublecheck!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// void replacement_cache(routing_table_t& nodes) const
 	// { m_table.replacement_cache(nodes); }
@@ -196,7 +196,7 @@ public:
 		m_running_requests.erase(a);
 	}
 
-	void status(std::vector<node_entry>& cf_table);
+	void status(std::vector<std::pair<int, std::vector<node_entry>>>& cf_table);
 
 	nsw_lookup const& get_stat(){return m_last_query_stat;};
 	std::tuple<int, int, int> get_stats_counters() const;
@@ -233,7 +233,7 @@ private:
 		, entry& reply
 		, address const& requester) const;
 	void incoming_request(msg const& h, entry& e);
-	void write_nodes_entries(bdecode_node const& want, entry& r);
+	void write_nodes_entries(bdecode_node const& want, entry& r, int lvl, int lay);
 
 	void nsw_query_engine(traversal_algorithm::callback_data_t const& v, nsw_lookup const& stat);
 	void add_friend_engine(traversal_algorithm::callback_data_t const& v, nsw_lookup const& stat);

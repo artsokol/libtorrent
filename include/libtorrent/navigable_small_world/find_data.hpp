@@ -46,7 +46,9 @@ protected:
 	virtual void done();
 	virtual observer_ptr new_observer(udp::endpoint const& ep
 		, node_id const& id
-		, vector_t const& text);
+		, vector_t const& text
+		, int lvl
+		, int lay);
 
 
 };

@@ -169,7 +169,7 @@ std::string node::generate_token(udp::endpoint const& addr, sha1_hash const& inf
 }
 
 
-void node::status(std::vector<node_entry>& cf_table)
+void node::status(std::vector<std::pair<int, std::vector<node_entry>>>& cf_table)
 {
 
 	std::lock_guard<std::mutex> l(m_mutex);
@@ -192,14 +192,30 @@ void node::bootstrap(/*std::vector<udp::endpoint> const& nodes,*/
 	int count = 0;
 #endif
 	//add closest friends
-	for_each(m_table.neighbourhood().begin(),m_table.neighbourhood().end(),[this, &r, &count]
-										(const node_entry& n)
-									{
-								#ifndef TORRENT_DISABLE_LOGGING
-											++count;
-								#endif
-											r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial);
-									});
+
+	auto& table = m_table.neighbourhood();
+	for (int it = 0; it !=table.size(); ++it) {
+		int lay = table[it].first;
+		for_each(table[it].second.begin(), table[it].second.end(), [this, &r, &count, it, lay] (const node_entry& n) {
+#ifndef TORRENT_DISABLE_LOGGING
+			++count;
+#endif
+			r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial, it, lay);			
+		});
+	}
+
+
+	// for_each(m_table.neighbourhood().begin(),m_table.neighbourhood().end(), [](const std::pair<int, std::vector<node_entry>>& item) {
+	// 	for_each(item.second.begin(),item.second.end(),[this, &r, &count, &item]
+	// 										(const node_entry& n)
+	// 									{
+	// 								#ifndef TORRENT_DISABLE_LOGGING
+	// 											++count;
+	// 								#endif
+	// 											r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial, item.fi);
+	// 									});
+
+	// });
 	// //add old friends
 	// for_each(m_table.old_relations().begin(),m_table.old_relations().end(),[this, &r, &count]
 	// 									(const node_entry& n)
@@ -231,7 +247,7 @@ void node::nsw_query(vector_t& query_vec)
 	m_query_results.clear();
 
 	std::vector<node_entry> closest_friends;
-	m_table.find_node(query_vec, closest_friends, m_table.neighbourhood_size());
+	m_table.find_node(query_vec, closest_friends, m_table.neighbourhood_size(), 0);
 
 	double similarity_with_me = term_vector::getVecSimilarity(m_table.get_descr(), query_vec);
 	double best_friend_similarity = (closest_friends.size() >0) ?
@@ -264,14 +280,17 @@ void node::nsw_query(vector_t& query_vec)
 	int count = 0;
 #endif
 	//add closest friends
-	for_each(m_table.neighbourhood().begin(),m_table.neighbourhood().end(),[this, &r, &count]
-										(const node_entry& n)
-									{
-								#ifndef TORRENT_DISABLE_LOGGING
-											++count;
-								#endif
-											r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial);
-									});
+
+	auto& table = m_table.neighbourhood();
+	for (int lvl = 0; lvl != table.size(); ++lvl) {
+		int lay = table[lvl].first;
+		for(auto& n : table[lvl].second) {
+#ifndef TORRENT_DISABLE_LOGGING
+			++count;
+#endif
+			r->add_entry(n.id, m_table.get_descr(), n.endpoint, observer_interface::flag_initial, lvl, lay);			
+		}
+	}
 
 
 #ifndef TORRENT_DISABLE_LOGGING
@@ -393,15 +412,15 @@ void node::add_gate_node(udp::endpoint const& gate, vector_t const& description_
 	m_table.add_gate_node(gate,description_vec);
 }
 
-void node::add_node(udp::endpoint const& node, node_id const& id)
-{
-	if (!native_address(node)) return;
-	// ping the node, and if we get a reply, it
-	// will be added to the routing table
+// void node::add_node(udp::endpoint const& node, node_id const& id)
+// {
+// 	if (!native_address(node)) return;
+// 	// ping the node, and if we get a reply, it
+// 	// will be added to the routing table
 
-	send_ping(node, id);
-	//m_table.add_node(node);
-}
+// 	send_ping(node, id);
+// 	//m_table.add_node(node);
+// }
 
 // void node::get_friends(sha1_hash const& info_hash
 // 		, vector_t const& target
@@ -485,7 +504,7 @@ void node::tick()
 }
 
 void node::send_ping(udp::endpoint const& ep
-					,node_id const& id)
+					, node_id const& id)
 {
 	TORRENT_ASSERT(id != m_id);
 
@@ -559,11 +578,13 @@ void node::incoming_request(msg const& m, entry& e)
 	key_desc_t const top_desc[] = {
 		{"q", bdecode_node::string_t, 0, 0},
 		{"a", bdecode_node::dict_t, 0, key_desc_t::parse_children},
-			{"q_id", bdecode_node::string_t, 20, 0},
-			{"r_id", bdecode_node::string_t, 20, key_desc_t::last_child},
+		{"q_id", bdecode_node::string_t, 20, 0},
+		{"q_lvl", bdecode_node::int_t, 0, key_desc_t::optional},
+		{"q_lay", bdecode_node::int_t, 0, key_desc_t::optional},
+		{"r_id", bdecode_node::string_t, 20, key_desc_t::last_child},
 	};
 
-	bdecode_node top_level[4];
+	bdecode_node top_level[6];
 	char error_string[200];
 
 	if (!verify_message(m.message, top_desc, top_level, error_string))
@@ -576,7 +597,9 @@ void node::incoming_request(msg const& m, entry& e)
 
 	bdecode_node arg_ent = top_level[1];
 	node_id id(top_level[2].string_ptr());
-	node_id requested_id(top_level[3].string_ptr());
+	node_id requested_id(top_level[5].string_ptr());
+	int q_level = top_level[3].int_value();
+	int q_layout = top_level[4].int_value();
 
 	if(requested_id.is_all_zeros())
 	{
@@ -628,7 +651,7 @@ void node::incoming_request(msg const& m, entry& e)
 
 		bdecode_node term_vector = msg_keys[0];
 
-		write_nodes_entries(term_vector, reply);
+		write_nodes_entries(term_vector, reply, q_level, q_layout);
 
 		// If our storage is full we want to withhold the write token so that
 		// announces will spill over to our neighbors. This widens the
@@ -679,7 +702,9 @@ void node::incoming_request(msg const& m, entry& e)
 		// the table get a chance to add it.
 		m_table.add_friend(node_entry(id, m.addr, friend_descr
 														, ~0
-														, true));
+														, true)
+							, q_level
+							, q_layout);
 
 		//m_table.node_seen(id, m.addr, 0xffff);
 	}
@@ -716,13 +741,14 @@ void node::incoming_request(msg const& m, entry& e)
 }
 
 
-void node::write_nodes_entries(bdecode_node const& want, entry& r)
+void node::write_nodes_entries(bdecode_node const& want, entry& r, int level, int layout)
 {
 
 	if (want.type() != bdecode_node::dict_t)
 	{
 		return;
 	}
+	if (!m_table.verifyLayoutInLevel(level, layout)) return;
 
 	// if there is a wants entry then we may need to reach into
 	// another node's routing table to get nodes of the requested type
@@ -736,7 +762,7 @@ void node::write_nodes_entries(bdecode_node const& want, entry& r)
 
 	std::vector<node_entry> closest_friends;
 
-	m_table.find_node(got_vector, closest_friends, m_table.neighbourhood_size());
+	m_table.find_node(got_vector, closest_friends, m_table.neighbourhood_size(), level);
 
 	double similarity_with_me = term_vector::getVecSimilarity(m_table.get_descr(), got_vector);
 	double best_friend_similarity = (closest_friends.size() >0) ?
@@ -789,7 +815,8 @@ void node::add_friend_engine(traversal_algorithm::callback_data_t const& v, nsw_
 		auto o = m_rpc.allocate_observer<add_friend_observer>(algo
 														, std::get<1>(p)
 														, std::get<0>(p)
-														, descr_vec());
+														, descr_vec()
+														);
 		if (!o) return;
 		entry e;
 		e["y"] = "q";
@@ -865,6 +892,9 @@ void add_friend_observer::reply(libtorrent::nsw::msg const& m)
 
 	bdecode_node q_id = r.dict_find_string("q_id");
 
+	int lvl = r.dict_find_int("q_lvl").int_value();
+	int lay = r.dict_find_int("q_lay").int_value();
+
 	node_id querying_id(q_id.string_ptr());
 
 	bdecode_node received_term_vector = r.dict_find_dict("description");
@@ -876,7 +906,9 @@ void add_friend_observer::reply(libtorrent::nsw::msg const& m)
 															, m.addr
 															, friend_descr
 															, ~0
-															, true));
+															, true)
+											   , lvl
+											   , lay);
 	flags |= flag_done;
 }
 

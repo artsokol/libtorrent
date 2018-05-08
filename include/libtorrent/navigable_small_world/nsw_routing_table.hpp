@@ -24,8 +24,8 @@ namespace libtorrent { namespace nsw
 {
 struct nsw_logger_interface;
 
-
-using routing_table_t = std::vector<node_entry> ;
+using lvlrouting_table_t = std::vector<node_entry>;
+using routing_table_t = std::vector<std::pair<int, lvlrouting_table_t>> ;
 
 typedef struct nsw_routing_info
 {
@@ -86,8 +86,8 @@ private:
 	    }
 	};
 
-	using replacement_table_t = std::multiset<node_entry
-											, textComp>;
+	using replacement_table_t = std::multiset<node_entry, textComp>;
+	using multireplacement_table_t = std::vector<replacement_table_t>;
 
 ////////////////////////////////////////////////////////
 
@@ -116,7 +116,7 @@ private:
 
 	// nodes with term_vectors exact the same as in other
 	// tables. Need for quick replacements.
-	replacement_table_t m_replacement_nodes;
+	multireplacement_table_t m_replacement_nodes;
 #ifndef TORRENT_DISABLE_LOGGING
 	nsw_logger_interface* m_log;
 #endif
@@ -156,14 +156,16 @@ public:
 	router_iterator end() const { return m_gate_nodes.end(); }
 
 
-	add_node_status_t add_friend_impl(node_entry e);
+	add_node_status_t add_friend_impl(node_entry e, int level, int layer);
 
-	bool add_friend(node_entry const& e);
+	bool add_friend(node_entry const& e, int level, int layer);
 
 	bool node_seen(node_id const& id
 					, vector_t const& vector
 					, udp::endpoint const& ep
-					, int rtt);
+					, int rtt
+					, int level
+					, int layer);
 
 	//update time
 	void heard_about(node_id const& id/*, udp::endpoint const& ep*/);
@@ -177,7 +179,7 @@ public:
 
 
 	void remove_node(node_entry* n
-		, routing_table_t& rt) ;
+		, routing_table_t& rt, int level) ;
 
 	template <typename F>
 	void for_each_node(F f)
@@ -186,7 +188,7 @@ public:
 	}
 
 	void for_each_node(void (*)(void*, node_entry const&)
-		, void* userdata) const;
+		, void* userdata, int level) const;
 
 	std::tuple<size_t,/* size_t, */size_t> size() const;
 
@@ -212,10 +214,12 @@ public:
 
 	int neighbourhood_size() const { return m_neighbourhood_size; }
 
+	bool verifyLayoutInLevel(int level, int layout);
+
 	// fills the vector with the k nodes from our storage that
 	// are nearest to the given text.
 	void find_node(vector_t const& target_string
-					, std::vector<node_entry>& l, int count=0);
+					, std::vector<node_entry>& l, int count, int lvl);
 //	std::int64_t num_global_nodes() const;
 
 //	void replacement_cache(bucket_t& nodes) const;
@@ -240,13 +244,14 @@ private:
 
 	node_entry* find_node(udp::endpoint const& ep
 							, routing_table::table_type_t& type
-							, int& index);
+							, int& index
+							, int& lvl);
 
 	node_entry* find_node(node_id const& id);
 
-	bool fill_from_replacements(node_entry& ne);
+	bool fill_from_replacements(node_entry& ne, int level);
 
-	routing_table::add_node_status_t insert_node(const node_entry& e);
+	routing_table::add_node_status_t insert_node(const node_entry& e, int level);
 };
 
 } } // namespace libtorrent::nsw

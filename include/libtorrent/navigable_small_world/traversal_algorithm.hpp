@@ -70,7 +70,9 @@ public:
 	void add_entry(node_id const& id
 				, vector_t const& descr
 				, udp::endpoint const& addr
-				, unsigned char flags);
+				, unsigned char flags
+				, int lvl
+				, int lay);
 
 	traversal_algorithm(node& nsw_node, node_id const& id, vector_t const& target_string);
 	int invoke_count() const { TORRENT_ASSERT(m_invoke_count >= 0); return m_invoke_count; }
@@ -96,7 +98,9 @@ protected:
 
 	virtual observer_ptr new_observer(udp::endpoint const& ep
 		, node_id const& id
-		, vector_t const& descr);
+		, vector_t const& descr
+		, int lvl
+		, int lay);
 
 	virtual bool invoke(observer_ptr) { return false; }
 

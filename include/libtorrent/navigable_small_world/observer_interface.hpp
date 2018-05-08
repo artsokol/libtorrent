@@ -47,7 +47,7 @@ protected:
 
 public:
 	observer_interface(std::shared_ptr<traversal_algorithm> const& a
-		, udp::endpoint const& ep, node_id const& id, vector_t const& text)
+		, udp::endpoint const& ep, node_id const& id, vector_t const& text/*, int lvl, int lay*/)
 		: m_sent()
 		, m_algorithm(a)
 		, m_id(id)
@@ -55,6 +55,8 @@ public:
 		, m_port(0)
 		, m_transaction_id()
 		, flags(0)
+		// , m_lvl(lvl)
+		// , m_lay(lay)
 	{
 //		TORRENT_ASSERT(a);
 // #if TORRENT_USE_ASSERTS
@@ -96,6 +98,12 @@ public:
 
 	void set_id(node_id const& id);
 	node_id const& id() const { return m_id; }
+
+	// void set_lvl(int lvl);
+	// int lvl() const { return m_lvl; }
+
+	// void set_lay(int lay);
+	// int lay() const { return m_lay; }
 
 	void set_descr(vector_t const& text);
 	vector_t const& descr() const { return m_description; }

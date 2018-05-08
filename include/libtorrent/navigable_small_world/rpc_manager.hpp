@@ -32,7 +32,8 @@ public:
 	null_observer(std::shared_ptr<traversal_algorithm> const& a
 		, udp::endpoint const& ep
 		, node_id const& id
-		, vector_t const& text): observer_interface(a, ep, id, text) {}
+		, vector_t const& text
+		): observer_interface(a, ep, id, text) {}
 	virtual void reply(msg const&) { flags |= flag_done; }
 };
 

@@ -190,7 +190,7 @@ std::vector<libtorrent::dht_routing_bucket> dht_routing_table;
 #endif
 
 #ifndef TORRENT_DISABLE_NSW
-std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<libtorrent::nsw::node_entry> > > cf_routing_tables;
+std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<std::pair<int, std::vector<libtorrent::nsw::node_entry>>> > > cf_routing_tables;
 // std::unordered_map<libtorrent::sha1_hash, std::pair<std::string, std::vector<libtorrent::nsw::node_entry> > > ff_routing_tables;
 std::shared_ptr<std::vector<std::string> > query_result(new std::vector<std::string>);
 #endif
@@ -1966,18 +1966,18 @@ int main(int argc, char* argv[])
 
 			for(;cf_it != cf_routing_tables.end();++cf_it/*,++ff_it*/)
 			{
-				std::vector<libtorrent::nsw::node_entry>& closest_friends = cf_it->second.second;
+				auto& layers = cf_it->second.second;
 				// std::vector<libtorrent::nsw::node_entry>& far_friends = ff_it->second.second;
 				std::unordered_map<std::string, double> descr_term_vector;
 				nsw::term_vector::makeTermVector(cf_it->second.first,descr_term_vector);
 				buf += "----------------------------------------------------------------------------------------------\n";
 				buf += "| NSW node | id: " + std::string(to_hex(cf_it->first).c_str()) + " | descr: " + cf_it->second.first.substr(0,35) + " |\n";
 				buf += "----------------------------------------------------------------------------------------------\n";
-				buf += "| close friends (" + std::to_string(closest_friends.size()) + "): |\n";
+				buf += "| close friends (" + std::to_string(layers.front().second.size()) + "): |\n";
 				buf += "----------------------------------------------------------------------------------------------\n";
 				pos += 5;
 
-				for(auto n:closest_friends)
+				for(auto n:layers.front().second)
 				{
 					std::stringstream ss;
                 	ss << std::fixed << std::setprecision(15) << nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector);

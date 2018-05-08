@@ -11,7 +11,7 @@ class get_friends : public find_data
 {
 public:
     typedef std::vector<std::tuple<node_id, udp::endpoint, std::string, double, uint16_t>> callback_data_t;
-	typedef std::function<void(callback_data_t const&, nsw_lookup const& common_statistic)> data_callback;
+	typedef std::function<void(callback_data_t const&, nsw_lookup const& common_statistic/*, int , int*/)> data_callback;
 
     struct row
     {
