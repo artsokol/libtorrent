@@ -51,7 +51,7 @@ protected:
     node& m_node;
     std::vector<observer_ptr> m_results;
 public:
-    typedef std::vector<std::tuple<node_id, udp::endpoint, std::string, double, uint16_t>> callback_data_t;
+    typedef std::vector<std::tuple<node_id, udp::endpoint, std::string, double, uint16_t, int, int>> callback_data_t;
     //void traverse(node_id const& id, udp::endpoint const& addr);
     void finished(observer_ptr o);
 

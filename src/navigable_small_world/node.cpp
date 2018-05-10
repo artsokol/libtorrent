@@ -547,7 +547,9 @@ void node::lookup_friends(sha1_hash const& info_hash
 
 entry write_nodes_entry(std::vector<node_entry> const& closest_nodes
                                                 , vector_t const& requested_vec
-                                                , entry& e)
+                                                , entry& e
+                                                , int lvl
+                                                , int lay)
 {
     entry::list_type& pe = e.list();
     for (auto const& n : closest_nodes)
@@ -557,8 +559,10 @@ entry write_nodes_entry(std::vector<node_entry> const& closest_nodes
         std::copy(n.id.begin(), n.id.end(), out_itr);
 
         double similarity = term_vector::getVecSimilarity(n.term_vector, requested_vec);
-        //std::string similarity_str = std::to_string(similarity);
+
         std::copy((char*)&similarity, (char*)&similarity+sizeof(double), out_itr);
+        std::copy((char*)&lvl, (char*)&lvl+sizeof(int), out_itr);
+        std::copy((char*)&lay, (char*)&lay+sizeof(int), out_itr);
 
         detail::write_endpoint(udp::endpoint(n.addr(), std::uint16_t(n.port())), out_itr);
 
@@ -779,7 +783,7 @@ void node::write_nodes_entries(bdecode_node const& want, entry& r, int level, in
     }
 
     entry& friends_vec = r["friends"];
-    write_nodes_entry(closest_friends, got_vector, friends_vec);
+    write_nodes_entry(closest_friends, got_vector, friends_vec, level, layout);
 }
 
 node::protocol_descriptor const& node::map_protocol_to_descriptor(udp protocol)
@@ -828,8 +832,8 @@ void node::add_friend_engine(traversal_algorithm::callback_data_t const& v, nsw_
         a["port"] = std::get<1>(p).port();
         a["token"] = std::get<2>(p);
         a["r_id"] = std::get<0>(p).to_string();
-        a["q_lvl"] = 0;//std::get<5>(p);
-        a["q_lay"] = 1;//std::get<6>(p);
+        a["q_lvl"] = std::get<5>(p);
+        a["q_lay"] = std::get<6>(p);
         entry& term_vec = a["description"];
         term_vector::vectorToEntry(descr_vec(),term_vec);
 

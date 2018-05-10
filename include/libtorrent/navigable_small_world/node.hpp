@@ -36,7 +36,9 @@ struct msg;
 
 TORRENT_EXTRA_EXPORT entry write_nodes_entry(std::vector<node_entry> const& nodes
 												, vector_t const& requested_vec
-												, entry& e);
+												, entry& e
+												, int lvl
+												, int lay);
 
 class add_friend_observer : public observer_interface
 {
@@ -235,9 +237,9 @@ private:
 	void incoming_request(msg const& h, entry& e);
 	void write_nodes_entries(bdecode_node const& want, entry& r, int lvl, int lay);
 
+public:
 	void nsw_query_engine(traversal_algorithm::callback_data_t const& v, nsw_lookup const& stat);
 	void add_friend_engine(traversal_algorithm::callback_data_t const& v, nsw_lookup const& stat);
-public:
 	boost::unordered::unordered_map<sha1_hash,boost::shared_ptr<nsw::term_vector> > m_torrents_term_vectors;
 
 #ifndef TORRENT_DISABLE_LOGGING

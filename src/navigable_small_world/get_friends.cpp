@@ -149,7 +149,9 @@ void get_friends::got_friends()
                                                                                     , item.addr
                                                                                     , item.token
                                                                                     , item.simil
-                                                                                    , item.generation));
+                                                                                    , item.generation
+                                                                                    , item.level
+                                                                                    , item.layer));
                                         });
         if (invoke_count() == 1 && m_data_callback)
         {
@@ -173,9 +175,13 @@ get_friends::get_friends(
     node& nsw_node
     , vector_t const& target
     , data_callback const& dcallback
-    , nodes_callback const& ncallback)
+    , nodes_callback const& ncallback
+    , int lvl
+    , int lay)
     : find_data(nsw_node, nsw_node.nid(),target, ncallback)
     , m_data_callback(dcallback)
+    , m_lvl(lvl)
+    , m_lay(lay)
 {
 }
 
@@ -272,6 +278,7 @@ get_friends::node_item get_friends::read_node_item(char const* str_in)
 {
     get_friends::node_item n;
     double term_value = 0.0;
+    int lvl, lay;
 
     std::copy(str_in, str_in + sizeof(node_id), n.id.begin());
     str_in += sizeof(node_id);
@@ -280,6 +287,12 @@ get_friends::node_item get_friends::read_node_item(char const* str_in)
 
     n.similarity = term_value;
     str_in += sizeof(double);
+    std::copy(str_in, str_in + sizeof(int), (char*)&lvl);
+    n.level = lvl;
+    str_in += sizeof(int);
+    std::copy(str_in, str_in + sizeof(int), (char*)&lay);
+    n.layer = lay;
+    str_in += sizeof(int);
     n.ep = detail::read_v4_endpoint<udp::endpoint>(str_in);
     return n;
 }

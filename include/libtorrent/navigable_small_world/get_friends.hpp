@@ -10,7 +10,7 @@ namespace libtorrent { namespace nsw
 class get_friends : public find_data
 {
 public:
-    typedef std::vector<std::tuple<node_id, udp::endpoint, std::string, double, uint16_t>> callback_data_t;
+    typedef std::vector<std::tuple<node_id, udp::endpoint, std::string, double, uint16_t, int, int>> callback_data_t;
     typedef std::function<void(callback_data_t const&, nsw_lookup const& common_statistic/*, int , int*/)> data_callback;
 
     struct row
@@ -58,7 +58,7 @@ public:
 
         bool operator==(row const& r)
         {
-            return this->id == r.id;
+            return this->id == r.id && this->level == r.level && this->layer == r.layer;
         }
 
     };
@@ -97,8 +97,8 @@ public:
         , vector_t const& target
         , data_callback const& dcallback
         , nodes_callback const& ncallback
-        // , int lvl
-        // , int lay
+        , int lvl
+        , int lay
         );
 
     virtual char const* name() const;

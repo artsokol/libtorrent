@@ -35,7 +35,7 @@ bootstrap::bootstrap(
     , done_callback const& callback
     , data_callback const& result_callback
     , bool exact)
-    : get_friends(nsw_node, target_text, result_callback, callback)
+    : get_friends(nsw_node, target_text, result_callback, callback, 0, 1)
     , m_exact_search(exact)
 {
 }

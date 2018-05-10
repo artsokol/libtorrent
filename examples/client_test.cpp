@@ -1977,16 +1977,19 @@ int main(int argc, char* argv[])
 				buf += "----------------------------------------------------------------------------------------------\n";
 				pos += 5;
 
-				for(auto n:layers.front().second)
+				for(auto n:layers)
 				{
-					std::stringstream ss;
-                	ss << std::fixed << std::setprecision(15) << nsw::term_vector::getVecSimilarity(descr_term_vector,n.term_vector);
+					for (auto m: n.second) {
+						std::stringstream ss;
+						ss << std::fixed << std::setprecision(15) << nsw::term_vector::getVecSimilarity(descr_term_vector,m.term_vector);
 
-					buf += "|" +  ss.str() + " | " + std::string(to_hex(n.id).c_str()) +
-								" | " + vectorToString(n.term_vector).substr(0,35) + "... |\n";
-					pos += 1;
+						buf += "|" +  ss.str() + " | " + std::string(to_hex(m.id).c_str()) +
+									" | " + vectorToString(m.term_vector).substr(0,35) + "... |\n";
+						pos += 1;
+					}
+					buf += "----------------------------------------------------------------------------------------------\n";
+					pos += 2;
 				}
-				buf += "----------------------------------------------------------------------------------------------\n";
 				// buf += "| far friends (" + std::to_string(far_friends.size()) + "): |\n";;
 				// pos += 2;
 
