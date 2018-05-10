@@ -5,6 +5,7 @@
 #include <functional>
 #include <tuple>
 #include <array>
+#include <future>
 
 #ifndef TORRENT_DISABLE_LOGGING
 #include "libtorrent/hex.hpp"
@@ -712,7 +713,29 @@ void node::incoming_request(msg const& m, entry& e)
                             , q_level
                             , q_layout);
 
-        //m_table.node_seen(id, m.addr, 0xffff);
+        if (m_table.neighbourhood().size() > q_level + 1
+            && m_table.neighbourhood()[q_level + 1].second.empty())
+        {
+                int new_lay = m_table.neighbourhood()[q_level + 1].first;
+                int new_lvl = q_level + 1;
+
+                auto cb = [](
+                        std::vector<std::pair<nsw::node_entry, std::string>> const&)
+                {
+                };
+
+                auto handle = std::async(std::launch::async, [this, new_lvl, new_lay, &cb] () {
+                                auto r = std::make_shared<nsw::get_friends>(*this
+                                                                            , m_table.get_descr()
+                                                                            , std::bind(&node::add_friend_engine, this, _1, _2)
+                                                                            , cb
+                                                                            , new_lvl
+                                                                            , new_lay);
+
+                                r->start();
+                });
+
+        }
     }
     else if (query == "search_query")
     {
@@ -918,6 +941,31 @@ void add_friend_observer::reply(libtorrent::nsw::msg const& m)
                                                , lvl
                                                , lay);
     flags |= flag_done;
+
+    if (algorithm()->get_node().m_table.neighbourhood().size() > lvl + 1
+            && algorithm()->get_node().m_table.neighbourhood()[lvl + 1].second.empty())
+    {
+            int new_lay = algorithm()->get_node().m_table.neighbourhood()[lvl + 1].first;
+            int new_lvl = lvl + 1;
+            auto &nd = algorithm()->get_node();
+
+            auto cb = [](
+                    std::vector<std::pair<nsw::node_entry, std::string>> const&)
+            {
+            };
+
+            auto handle = std::async(std::launch::async, [this, new_lvl, new_lay, &nd, &cb] () {
+                            auto r = std::make_shared<nsw::get_friends>(nd
+                                                                                    , nd.m_table.get_descr()
+                                                                                    , std::bind(&node::add_friend_engine, &nd, _1, _2)
+                                                                                    , cb
+                                                                                    , new_lvl
+                                                                                    , new_lay);
+
+                            r->start();
+            });
+    }
+
 }
 
 void search_query_observer::reply(libtorrent::nsw::msg const& m)
